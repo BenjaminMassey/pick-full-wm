@@ -7,9 +7,10 @@ const SIZE_CONFIG: &str = "80%x100%";
 
 pub struct State {
     pub display: *mut xlib::Display,
-    pub attr: xlib::XWindowAttributes,
     pub sizes: Sizes,
     pub event: xlib::XEvent,
+    pub main_window: Option<xlib::Window>,
+    pub side_windows: Vec<Option<xlib::Window>>,
 }
 impl State {
     pub fn init() -> Self {
@@ -19,14 +20,14 @@ impl State {
             eprintln!("Display \"{}\" is null.", arg0);
             std::process::exit(1);
         }
-        let attr: xlib::XWindowAttributes = unsafe { zeroed() };
         let sizes = Sizes::init(arg0, display);
         let event: xlib::XEvent = unsafe { zeroed() };
         Self {
             display,
-            attr,
             sizes,
             event,
+            main_window: None,
+            side_windows: vec![],
         }
     }
 }
@@ -43,8 +44,10 @@ impl Sizes {
             unsafe { xlib::XDisplayHeight(display, arg0.into()) },
         );
         let main = crate::calc::get_full_size(screen.0 as f32, screen.1 as f32, SIZE_CONFIG);
-        let side = (screen.0 - main.0, screen.1 - main.1); // TODO: use this
-        Self { screen, main, side }
+        let side = (screen.0 - main.0, screen.1 - main.1); // TODO: make sense?
+        let ret = Self { screen, main, side };
+        ret.print();
+        ret
     }
     fn print(&self) {
         println!(
