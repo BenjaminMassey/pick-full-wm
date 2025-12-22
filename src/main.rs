@@ -27,6 +27,10 @@ fn main() {
                     println!("ButtonPress event!");
                     events::button(&mut state);
                 }
+                xlib::DestroyNotify => {
+                    println!("DestroyNotify event!");
+                    events::destroy(&mut state);
+                }
                 _ => {}
             };
         }

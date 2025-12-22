@@ -15,6 +15,18 @@ pub fn input(state: &mut crate::state::State) {
             0,
             0,
         ); // left mouse button
+        xlib::XGrabButton(
+            state.display,
+            3,
+            0,
+            xlib::XDefaultRootWindow(state.display),
+            true as c_int,
+            (xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::PointerMotionMask) as c_uint,
+            xlib::GrabModeAsync,
+            xlib::GrabModeAsync,
+            0,
+            0,
+        ); // right mouse button
     };
 }
 
