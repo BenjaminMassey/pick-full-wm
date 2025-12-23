@@ -12,7 +12,8 @@ mod windows;
 fn main() {
     let mut state = state::State::init();
 
-    setup::input(&mut state);
+    setup::mouse_input(&mut state);
+    setup::key_input(&mut state);
     setup::windows(&mut state);
 
     loop {
@@ -27,6 +28,10 @@ fn main() {
                 xlib::ButtonPress => {
                     println!("ButtonPress event!");
                     events::button(&mut state);
+                }
+                xlib::KeyRelease => {
+                    println!("KeyRelease event!");
+                    events::key(&mut state);
                 }
                 xlib::DestroyNotify => {
                     println!("DestroyNotify event!");

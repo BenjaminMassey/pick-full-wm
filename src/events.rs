@@ -1,4 +1,7 @@
-use x11::xlib;
+use libc::c_uint;
+use x11::{keysym, xlib};
+
+const LAUNCHER: &str = "rofi -show run";
 
 pub fn map_request(state: &mut crate::state::State) {
     let event: xlib::XMapRequestEvent = From::from(state.event);
@@ -25,7 +28,6 @@ pub fn button(state: &mut crate::state::State) {
         // left click
         if let Some(existing) = state.main_window {
             if existing == event.subwindow {
-                // TODO: make sure clicking gets passed
                 unsafe {
                     xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime)
                 };
@@ -46,6 +48,19 @@ pub fn button(state: &mut crate::state::State) {
         }
         unsafe { xlib::XDestroyWindow(state.display, event.subwindow) };
         unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
+    }
+}
+
+pub fn key(state: &mut crate::state::State) {
+    let event: xlib::XKeyReleasedEvent = From::from(state.event);
+    let super_l = unsafe {
+        event.keycode == xlib::XKeysymToKeycode(state.display, keysym::XK_Super_L as u64) as c_uint
+    };
+    let super_r = unsafe {
+        event.keycode == xlib::XKeysymToKeycode(state.display, keysym::XK_Super_R as u64) as c_uint
+    };
+    if super_l || super_r {
+        crate::windows::run_command(LAUNCHER);
     }
 }
 

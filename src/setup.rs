@@ -1,7 +1,7 @@
 use libc::{c_int, c_uint};
-use x11::xlib;
+use x11::{keysym, xlib};
 
-pub fn input(state: &mut crate::state::State) {
+pub fn mouse_input(state: &mut crate::state::State) {
     unsafe {
         xlib::XGrabButton(
             state.display,
@@ -27,6 +27,29 @@ pub fn input(state: &mut crate::state::State) {
             0,
             0,
         ); // right mouse button
+    };
+}
+
+pub fn key_input(state: &mut crate::state::State) {
+    unsafe {
+        xlib::XGrabKey(
+            state.display,
+            xlib::XKeysymToKeycode(state.display, keysym::XK_Super_L as u64) as i32,
+            0,
+            xlib::XDefaultRootWindow(state.display),
+            xlib::True,
+            xlib::GrabModeAsync,
+            xlib::GrabModeAsync,
+        ); // left super (windows) key
+        xlib::XGrabKey(
+            state.display,
+            xlib::XKeysymToKeycode(state.display, keysym::XK_Super_R as u64) as i32,
+            0,
+            xlib::XDefaultRootWindow(state.display),
+            xlib::True,
+            xlib::GrabModeAsync,
+            xlib::GrabModeAsync,
+        ); // right super (windows) key
     };
 }
 
