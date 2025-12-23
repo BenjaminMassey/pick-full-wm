@@ -1,6 +1,14 @@
 use libc::{c_int, c_uint};
 use x11::{keysym, xlib};
 
+const STARTUPS: &'static [&'static str] = &["polybar", "rofi -show run"];
+
+pub fn run_startups() {
+    for startup in STARTUPS {
+        crate::windows::run_command(startup);
+    }
+}
+
 pub fn mouse_input(state: &mut crate::state::State) {
     unsafe {
         xlib::XGrabButton(

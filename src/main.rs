@@ -12,6 +12,7 @@ mod windows;
 fn main() {
     let mut state = state::State::init();
 
+    setup::run_startups();
     setup::mouse_input(&mut state);
     setup::key_input(&mut state);
     setup::windows(&mut state);
