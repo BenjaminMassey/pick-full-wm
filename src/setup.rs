@@ -10,8 +10,8 @@ pub fn input(state: &mut crate::state::State) {
             xlib::XDefaultRootWindow(state.display),
             true as c_int,
             (xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::PointerMotionMask) as c_uint,
-            xlib::GrabModeAsync,
-            xlib::GrabModeAsync,
+            xlib::GrabModeSync,
+            xlib::GrabModeSync,
             0,
             0,
         ); // left mouse button
@@ -22,8 +22,8 @@ pub fn input(state: &mut crate::state::State) {
             xlib::XDefaultRootWindow(state.display),
             true as c_int,
             (xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::PointerMotionMask) as c_uint,
-            xlib::GrabModeAsync,
-            xlib::GrabModeAsync,
+            xlib::GrabModeSync,
+            xlib::GrabModeSync,
             0,
             0,
         ); // right mouse button

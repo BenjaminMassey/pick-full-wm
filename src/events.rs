@@ -26,21 +26,26 @@ pub fn button(state: &mut crate::state::State) {
         if let Some(existing) = state.main_window {
             if existing == event.subwindow {
                 // TODO: make sure clicking gets passed
+                unsafe {
+                    xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime)
+                };
                 return;
             }
             crate::windows::remove_side_window(state, event.subwindow);
             crate::windows::fill_main_space(state, event.subwindow);
             crate::windows::send_side_space(state, existing);
+            unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
         }
     } else if event.button == 3 {
         // right click
         if let Some(existing) = state.main_window
             && existing == event.subwindow
         {
-            // TODO: make sure clicking gets passed
+            unsafe { xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime) };
             return;
         }
         unsafe { xlib::XDestroyWindow(state.display, event.subwindow) };
+        unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
     }
 }
 
