@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Pick-Full-WM
+Comment=A custom focus-swapping x11 window manager
+Exec=/home/ben/Development/Rust/pick-full-wm/target/release/pick-full-wm
+Type=Application
+DesktopNames=pick-full-wm
