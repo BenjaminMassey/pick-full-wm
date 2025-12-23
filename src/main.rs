@@ -5,6 +5,7 @@ use x11::xlib;
 
 mod calc;
 mod events;
+mod settings;
 mod setup;
 mod state;
 mod windows;
@@ -12,7 +13,7 @@ mod windows;
 fn main() {
     let mut state = state::State::init();
 
-    setup::run_startups();
+    setup::run_startups(&mut state);
     setup::mouse_input(&mut state);
     setup::key_input(&mut state);
     setup::windows(&mut state);

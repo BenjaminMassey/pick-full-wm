@@ -1,10 +1,8 @@
 use libc::{c_int, c_uint};
 use x11::{keysym, xlib};
 
-const STARTUPS: &'static [&'static str] = &["polybar", "rofi -show run"];
-
-pub fn run_startups() {
-    for startup in STARTUPS {
+pub fn run_startups(state: &mut crate::state::State) {
+    for startup in &state.settings.applications.startups {
         crate::windows::run_command(startup);
     }
 }

@@ -2,10 +2,8 @@ use libc::c_int;
 use std::mem::zeroed;
 use x11::xlib;
 
-const SIZE_CONFIG: &str = "80%x96%";
-//const SIZE_CONFIG: &str = "1800x1080";
-
 pub struct State {
+    pub settings: crate::settings::Settings,
     pub display: *mut xlib::Display,
     pub sizes: Sizes,
     pub event: xlib::XEvent,
@@ -14,15 +12,17 @@ pub struct State {
 }
 impl State {
     pub fn init() -> Self {
+        let settings = crate::settings::get_settings();
         let arg0 = 0x0_i8;
         let display = unsafe { xlib::XOpenDisplay(&arg0) };
         if display.is_null() {
             eprintln!("Display \"{}\" is null.", arg0);
             std::process::exit(1);
         }
-        let sizes = Sizes::init(arg0, display);
+        let sizes = Sizes::init(&settings, arg0, display);
         let event: xlib::XEvent = unsafe { zeroed() };
         Self {
+            settings,
             display,
             sizes,
             event,
@@ -38,12 +38,20 @@ pub struct Sizes {
     pub side: (c_int, c_int),
 }
 impl Sizes {
-    pub fn init(arg0: i8, display: *mut xlib::Display) -> Self {
+    pub fn init(
+        settings: &crate::settings::Settings,
+        arg0: i8,
+        display: *mut xlib::Display,
+    ) -> Self {
         let screen: (c_int, c_int) = (
             unsafe { xlib::XDisplayWidth(display, arg0.into()) },
             unsafe { xlib::XDisplayHeight(display, arg0.into()) },
         );
-        let main = crate::calc::get_full_size(screen.0 as f32, screen.1 as f32, SIZE_CONFIG);
+        let main = crate::calc::get_full_size(
+            screen.0 as f32,
+            screen.1 as f32,
+            &settings.layout.main_size,
+        );
         let side = (screen.0 - main.0, main.1);
         let ret = Self { screen, main, side };
         ret.print();

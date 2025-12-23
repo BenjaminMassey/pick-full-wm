@@ -1,8 +1,6 @@
 use libc::c_uint;
 use x11::{keysym, xlib};
 
-const LAUNCHER: &str = "rofi -show run";
-
 pub fn map_request(state: &mut crate::state::State) {
     let event: xlib::XMapRequestEvent = From::from(state.event);
     if event.window == 0 {
@@ -60,7 +58,7 @@ pub fn key(state: &mut crate::state::State) {
         event.keycode == xlib::XKeysymToKeycode(state.display, keysym::XK_Super_R as u64) as c_uint
     };
     if super_l || super_r {
-        crate::windows::run_command(LAUNCHER);
+        crate::windows::run_command(&state.settings.applications.launcher);
     }
 }
 

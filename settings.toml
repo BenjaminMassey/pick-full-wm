@@ -1,0 +1,10 @@
+title = "pick-full-wm"
+
+[applications]
+startups = [ "polybar", "rofi -show run" ]
+launcher = "rofi -show run"
+excluded = [ "polybar", "rofi" ]
+
+[layout]
+main_size = "80%x96%"
+#main_size = "1800x1080"

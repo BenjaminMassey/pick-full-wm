@@ -2,8 +2,6 @@ use libc::{c_int, c_uint};
 use std::{ffi::CStr, ptr};
 use x11::xlib;
 
-const EXCEPTIONS: &str = "polybar,rofi";
-
 pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
     println!(
         "fill_main_space {} 0,0 {}x{}",
@@ -70,7 +68,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
 pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window) -> bool {
     if let Some(name) = get_window_name(state, window) {
         println!("window name: {}", &name);
-        for exception in EXCEPTIONS.split(",") {
+        for exception in &state.settings.applications.excluded {
             if name.contains(exception) {
                 return true;
             }

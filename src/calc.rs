@@ -5,6 +5,8 @@ pub fn get_full_size(
     display_height: f32,
     config_string: &str,
 ) -> (c_int, c_int) {
+    println!("calculating sizing with string \"{}\"", config_string);
+    // TODO: backup scenarios, rather than asserts
     assert!(config_string.contains("x"));
     let pieces: Vec<String> = config_string.split("x").map(|s| s.to_owned()).collect();
     assert_eq!(pieces.len(), 2);
