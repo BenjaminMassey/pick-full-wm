@@ -1,9 +1,18 @@
 use libc::{c_int, c_uint};
+use std::{ffi::CStr, ptr};
 use x11::xlib;
+
+const EXCEPTIONS: &str = "polybar,rofi";
 
 pub fn map_request(state: &mut crate::state::State) {
     let event: xlib::XMapRequestEvent = From::from(state.event);
+    if event.window == 0 {
+        return;
+    }
     unsafe { xlib::XMapWindow(state.display, event.window) };
+    if is_excepted_window(state, event.window) {
+        return;
+    }
     if state.main_window.is_none() {
         fill_main_space(state, event.window);
     } else {
@@ -13,7 +22,7 @@ pub fn map_request(state: &mut crate::state::State) {
 
 pub fn button(state: &mut crate::state::State) {
     let event: xlib::XButtonEvent = From::from(state.event);
-    if event.subwindow == 0 {
+    if event.subwindow == 0 || is_excepted_window(state, event.subwindow) {
         return;
     }
     if event.button == 1 {
@@ -48,6 +57,8 @@ pub fn destroy(state: &mut crate::state::State) {
                     remove_side_window(state, target);
                     fill_main_space(state, target);
                 }
+            } else {
+                state.main_window = None;
             }
         } else {
             remove_side_window(state, event.window);
@@ -93,7 +104,7 @@ fn remove_side_window(state: &mut crate::state::State, window: xlib::Window) {
 }
 
 fn layout_side_space(state: &mut crate::state::State) {
-    let section_size = state.sizes.screen.1 as f32 / state.side_windows.len() as f32; // TODO: should be using size?
+    let section_size = state.sizes.side.1 as f32 / state.side_windows.len() as f32;
     for (index, window) in state.side_windows.iter().enumerate() {
         if let Some(window) = window {
             let section_pos = section_size * index as f32;
@@ -116,5 +127,30 @@ fn layout_side_space(state: &mut crate::state::State) {
                 );
             }
         }
+    }
+}
+
+fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window) -> bool {
+    if let Some(name) = get_window_name(state, window) {
+        println!("window name: {}", &name);
+        for exception in EXCEPTIONS.split(",") {
+            if name.contains(exception) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn get_window_name(state: &mut crate::state::State, window: xlib::Window) -> Option<String> {
+    let mut name_ptr: *mut i8 = ptr::null_mut();
+    let fetch = unsafe { xlib::XFetchName(state.display, window, &mut name_ptr) };
+    if fetch != 0 && !name_ptr.is_null() {
+        let c_name = unsafe { CStr::from_ptr(name_ptr) };
+        let name = c_name.to_string_lossy().into_owned();
+        unsafe { xlib::XFree(name_ptr as *mut _) };
+        Some(name)
+    } else {
+        None
     }
 }

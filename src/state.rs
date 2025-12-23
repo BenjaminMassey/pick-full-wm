@@ -2,7 +2,7 @@ use libc::c_int;
 use std::mem::zeroed;
 use x11::xlib;
 
-const SIZE_CONFIG: &str = "80%x100%";
+const SIZE_CONFIG: &str = "80%x96%";
 //const SIZE_CONFIG: &str = "1800x1080";
 
 pub struct State {
@@ -44,7 +44,7 @@ impl Sizes {
             unsafe { xlib::XDisplayHeight(display, arg0.into()) },
         );
         let main = crate::calc::get_full_size(screen.0 as f32, screen.1 as f32, SIZE_CONFIG);
-        let side = (screen.0 - main.0, screen.1 - main.1); // TODO: make sense?
+        let side = (screen.0 - main.0, main.1);
         let ret = Self { screen, main, side };
         ret.print();
         ret
