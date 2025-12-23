@@ -14,8 +14,8 @@ pub struct State {
 }
 impl State {
     pub fn init() -> Self {
-        let mut arg0 = 0x0 as i8;
-        let display = unsafe { xlib::XOpenDisplay(&mut arg0) };
+        let arg0 = 0x0_i8;
+        let display = unsafe { xlib::XOpenDisplay(&arg0) };
         if display.is_null() {
             eprintln!("Display \"{}\" is null.", arg0);
             std::process::exit(1);
