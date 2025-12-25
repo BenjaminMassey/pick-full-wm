@@ -1,8 +1,8 @@
 title = "pick-full-wm"
 
 [applications]
-startups = [ "polybar", "rofi -show run" ]
-launcher = "rofi -show run"
+startups = [ "polybar", "rofi -show drun" ]
+launcher = "rofi -show drun"
 excluded = [ "polybar", "rofi" ]
 
 [layout]
