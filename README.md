@@ -33,7 +33,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Set-able list of applications to exclude from managing
 - [x] Set-able "launcher" application to run with Super key
 - [x] Set-able size of "main" area via percent or pixels
-- [ ] Implementation of x11 error handling
+- [x] Implementation of x11 error handling
 - [ ] Some implementation of virtual workspaces
 - [ ] Built-in multi-monitor support
 - [ ] Keyboard options for window switching

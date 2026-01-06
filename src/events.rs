@@ -3,7 +3,8 @@ use x11::{keysym, xlib};
 
 pub fn map_request(state: &mut crate::state::State) {
     let event: xlib::XMapRequestEvent = From::from(state.event);
-    if event.window == 0 {
+    if !crate::safety::window_exists(state, event.window) {
+        unsafe { xlib::XAllowEvents(state.display, xlib::AsyncBoth, xlib::CurrentTime) };
         return;
     }
     unsafe { xlib::XMapWindow(state.display, event.window) };
@@ -19,7 +20,8 @@ pub fn map_request(state: &mut crate::state::State) {
 
 pub fn button(state: &mut crate::state::State) {
     let event: xlib::XButtonEvent = From::from(state.event);
-    if event.subwindow == 0 || crate::windows::is_excepted_window(state, event.subwindow) {
+    if !crate::safety::window_exists(state, event.window) || crate::windows::is_excepted_window(state, event.subwindow) {
+        unsafe { xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime) };
         return;
     }
     if event.button == 1 {

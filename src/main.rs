@@ -5,14 +5,15 @@ use x11::xlib;
 
 mod calc;
 mod events;
+mod safety;
 mod settings;
 mod setup;
 mod state;
 mod windows;
 
 fn main() {
+    safety::setup_error_handler();
     let mut state = state::State::init();
-
     setup::run_startups(&mut state);
     setup::mouse_input(&mut state);
     setup::key_input(&mut state);
