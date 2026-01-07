@@ -1,5 +1,5 @@
 use libc::{c_int, c_uint};
-use x11::{keysym, xlib};
+use x11::xlib;
 
 pub fn run_startups(state: &mut crate::state::State) {
     for startup in &state.settings.applications.startups {
@@ -37,26 +37,24 @@ pub fn mouse_input(state: &mut crate::state::State) {
 }
 
 pub fn key_input(state: &mut crate::state::State) {
-    unsafe {
-        xlib::XGrabKey(
-            state.display,
-            xlib::XKeysymToKeycode(state.display, keysym::XK_Super_L as u64) as i32,
-            0,
-            xlib::XDefaultRootWindow(state.display),
-            xlib::True,
-            xlib::GrabModeAsync,
-            xlib::GrabModeAsync,
-        ); // left super (windows) key
-        xlib::XGrabKey(
-            state.display,
-            xlib::XKeysymToKeycode(state.display, keysym::XK_Super_R as u64) as i32,
-            0,
-            xlib::XDefaultRootWindow(state.display),
-            xlib::True,
-            xlib::GrabModeAsync,
-            xlib::GrabModeAsync,
-        ); // right super (windows) key
-    };
+    for k in crate::keymap::get_key_strings(state) {
+        let key = crate::keymap::parse_string(&k); 
+        if let Some(key) = key {
+            unsafe {
+                xlib::XGrabKey(
+                    state.display,
+                    xlib::XKeysymToKeycode(state.display, key as u64) as i32,
+                    xlib::Mod4Mask, // super key
+                    xlib::XDefaultRootWindow(state.display),
+                    xlib::True,
+                    xlib::GrabModeAsync,
+                    xlib::GrabModeAsync,
+                )
+            };
+        } else {
+            eprintln!("unknown key in settings: {}", k);
+        }
+    }
 }
 
 pub fn windows(state: &mut crate::state::State) {

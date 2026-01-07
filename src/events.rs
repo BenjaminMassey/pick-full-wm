@@ -1,5 +1,4 @@
-use libc::c_uint;
-use x11::{keysym, xlib};
+use x11::xlib;
 
 pub fn map_request(state: &mut crate::state::State) {
     let event: xlib::XMapRequestEvent = From::from(state.event);
@@ -53,14 +52,33 @@ pub fn button(state: &mut crate::state::State) {
 
 pub fn key(state: &mut crate::state::State) {
     let event: xlib::XKeyReleasedEvent = From::from(state.event);
-    let super_l = unsafe {
-        event.keycode == xlib::XKeysymToKeycode(state.display, keysym::XK_Super_L as u64) as c_uint
-    };
-    let super_r = unsafe {
-        event.keycode == xlib::XKeysymToKeycode(state.display, keysym::XK_Super_R as u64) as c_uint
-    };
-    if super_l || super_r {
-        crate::windows::run_command(&state.settings.applications.launcher);
+    let keysym = unsafe { xlib::XKeycodeToKeysym(state.display, event.keycode as u8, 0) };
+
+    let launcher_key = crate::keymap::parse_string(&state.settings.bindings.launcher);
+    if let Some(launcher_key) = launcher_key {
+        if keysym == launcher_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            crate::windows::run_command(&state.settings.applications.launcher);
+        }
+    }
+
+    for (index, key) in state.settings.bindings.swaps.clone().iter().enumerate() {
+        if index >= state.side_windows.len() {
+            continue;
+        }
+        let swap_key = crate::keymap::parse_string(key);
+        if let Some(swap_key) = swap_key {
+            if keysym == swap_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+                let target = state.side_windows[index];
+                if let Some(target) = target {
+                    let existing = state.main_window.clone();
+                    crate::windows::remove_side_window(state, target);
+                    crate::windows::fill_main_space(state, target);
+                    if let Some(existing) = existing {
+                        crate::windows::send_side_space(state, existing);
+                    }
+                }
+            }
+        }
     }
 }
 

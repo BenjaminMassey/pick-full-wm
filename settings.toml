@@ -8,3 +8,7 @@ excluded = [ "polybar", "rofi" ]
 [layout]
 main_size = "80%x96%"
 #main_size = "1800x1080"
+
+[bindings]
+launcher = "space"
+swaps = [ "j", "k", "l", ";" ]

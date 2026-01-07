@@ -11,9 +11,16 @@ pub struct Layout {
 }
 
 #[derive(serde::Deserialize, Clone)]
+pub struct Bindings {
+    pub launcher: String,
+    pub swaps: Vec<String>,
+}
+
+#[derive(serde::Deserialize, Clone)]
 pub struct Settings {
     pub applications: Applications,
     pub layout: Layout,
+    pub bindings: Bindings,
 }
 impl Settings {
     fn default() -> Self {
@@ -25,6 +32,10 @@ impl Settings {
             },
             layout: Layout {
                 main_size: "80%x96%".to_owned(),
+            },
+            bindings: Bindings {
+                launcher: "space".to_owned(),
+                swaps: vec!["j".to_owned(), "k".to_owned(), "l".to_owned(), ";".to_owned()],
             },
         }
     }
