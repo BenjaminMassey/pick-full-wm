@@ -18,6 +18,7 @@ pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
         );
     }
     state.main_window = Some(window);
+    focus_main(state);
 }
 
 pub fn send_side_space(state: &mut crate::state::State, window: xlib::Window) {
@@ -99,4 +100,22 @@ pub fn run_command(command: &str) {
         Ok(_) => println!("Run command: \"{}\"", command),
         Err(e) => eprintln!("Failed to run command \"{}\": {}", command, e),
     };
+}
+
+fn focus_main(state: &mut crate::state::State) {
+    if let Some(window) = state.main_window && crate::safety::window_exists(state, window) {
+        unsafe {
+            xlib::XWarpPointer(
+                state.display,
+                0,
+                window,
+                0, 0,
+                0, 0,
+                (state.sizes.main.0 as f32 * 0.5f32) as c_int,
+                (state.sizes.main.1 as f32 * 0.5f32) as c_int,
+            );
+            crate::ewmh::set_active(state, window);
+            xlib::XFlush(state.display);
+        }
+    }
 }

@@ -12,3 +12,4 @@ main_size = "80%x96%"
 [bindings]
 launcher = "space"
 swaps = [ "j", "k", "l", ";" ]
+close_main = [ "q" ]

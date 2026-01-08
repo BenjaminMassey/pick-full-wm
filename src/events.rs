@@ -80,6 +80,16 @@ pub fn key(state: &mut crate::state::State) {
             }
         }
     }
+
+    let close_key = crate::keymap::parse_string(&state.settings.bindings.close_main);
+    if let Some(close_key) = close_key {
+        if keysym == close_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            if let Some(main) = state.main_window {
+                unsafe { xlib::XDestroyWindow(state.display, main) };
+                unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
+            }
+        }
+    }
 }
 
 pub fn destroy(state: &mut crate::state::State) {
@@ -99,4 +109,7 @@ pub fn destroy(state: &mut crate::state::State) {
         }
     }
     crate::windows::layout_side_space(state);
+    if state.main_window.is_none() {
+        crate::ewmh::clear_active(state);
+    }
 }

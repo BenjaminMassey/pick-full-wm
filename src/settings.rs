@@ -14,6 +14,7 @@ pub struct Layout {
 pub struct Bindings {
     pub launcher: String,
     pub swaps: Vec<String>,
+    pub close_main: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -36,6 +37,7 @@ impl Settings {
             bindings: Bindings {
                 launcher: "space".to_owned(),
                 swaps: vec!["j".to_owned(), "k".to_owned(), "l".to_owned(), ";".to_owned()],
+                close_main: "q".to_owned(),
             },
         }
     }

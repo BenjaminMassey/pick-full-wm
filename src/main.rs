@@ -5,6 +5,7 @@ use x11::xlib;
 
 mod calc;
 mod events;
+mod ewmh;
 mod keymap;
 mod safety;
 mod settings;
