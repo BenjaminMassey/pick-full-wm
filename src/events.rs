@@ -129,6 +129,13 @@ pub fn key(state: &mut crate::state::State) {
             crate::binaries::help_window();
         }
     }
+
+    let term_key = crate::keymap::parse_string(&state.settings.bindings.terminal);
+    if let Some(term_key) = term_key {
+        if keysym == term_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            crate::windows::run_command(&state.settings.applications.terminal);
+        }
+    }
 }
 
 pub fn destroy(state: &mut crate::state::State) {

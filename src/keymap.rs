@@ -9,6 +9,7 @@ pub fn get_key_strings(state: &mut crate::state::State) -> Vec<String> {
     keys.push(state.settings.bindings.close_main.clone());
     keys.push(state.settings.bindings.fullscreen.clone());
     keys.push(state.settings.bindings.help.clone());
+    keys.push(state.settings.bindings.terminal.clone());
     keys
 }
 
@@ -42,7 +43,7 @@ pub fn parse_string(s: &str) -> Option<u64> {
         "x" => keysym::XK_x,
         "y" => keysym::XK_y,
         "z" => keysym::XK_z,
-        
+
         // Numbers
         "0" => keysym::XK_0,
         "1" => keysym::XK_1,
@@ -54,7 +55,7 @@ pub fn parse_string(s: &str) -> Option<u64> {
         "7" => keysym::XK_7,
         "8" => keysym::XK_8,
         "9" => keysym::XK_9,
-        
+
         // Function Keys (lowercase f)
         "f1" => keysym::XK_F1,
         "f2" => keysym::XK_F2,
@@ -68,7 +69,7 @@ pub fn parse_string(s: &str) -> Option<u64> {
         "f10" => keysym::XK_F10,
         "f11" => keysym::XK_F11,
         "f12" => keysym::XK_F12,
-        
+
         // Special Keys
         "spc" | "space" => keysym::XK_space,
         "ret" | "enter" => keysym::XK_Return,
@@ -81,13 +82,13 @@ pub fn parse_string(s: &str) -> Option<u64> {
         "end" => keysym::XK_End,
         "pgup" => keysym::XK_Page_Up,
         "pgdn" => keysym::XK_Page_Down,
-        
+
         // Arrow Keys
         "up" => keysym::XK_Up,
         "down" => keysym::XK_Down,
         "left" => keysym::XK_Left,
         "right" => keysym::XK_Right,
-        
+
         // Punctuation (unshifted versions)
         "-" => keysym::XK_minus,
         "=" => keysym::XK_equal,
@@ -100,7 +101,7 @@ pub fn parse_string(s: &str) -> Option<u64> {
         "." => keysym::XK_period,
         "/" => keysym::XK_slash,
         "`" => keysym::XK_grave,
-        
+
         // Keypad
         "kp0" => keysym::XK_KP_0,
         "kp1" => keysym::XK_KP_1,
@@ -118,11 +119,11 @@ pub fn parse_string(s: &str) -> Option<u64> {
         "kp/" => keysym::XK_KP_Divide,
         "kp." => keysym::XK_KP_Decimal,
         "kpret" => keysym::XK_KP_Enter,
-        
+
         // Locks
         "caps" => keysym::XK_Caps_Lock,
         "num" => keysym::XK_Num_Lock,
-        
+
         // Multimedia
         "mute" => keysym::XF86XK_AudioMute,
         "volu" => keysym::XF86XK_AudioRaiseVolume,
@@ -132,7 +133,7 @@ pub fn parse_string(s: &str) -> Option<u64> {
         "next" => keysym::XF86XK_AudioNext,
         "briu" => keysym::XF86XK_MonBrightnessUp,
         "brid" => keysym::XF86XK_MonBrightnessDown,
-        
+
         _ => return None,
     } as u64)
 }

@@ -4,6 +4,7 @@ title = "pick-full-wm"
 startups = [ "polybar", "rofi -show drun" ]
 launcher = "rofi -show drun"
 excluded = [ "polybar", "rofi" ]
+terminal = "alacritty"
 
 [layout]
 main_size = "80%x96%"
@@ -18,3 +19,4 @@ close_main = "q"
 fullscreen = "f"
 help = "h"
 key_hints = true
+terminal = "t"

@@ -58,6 +58,10 @@ impl eframe::App for HelpWindow {
                 "[SUPER] + [{}]: fullscreen main window",
                 &self.settings.bindings.fullscreen.to_uppercase()
             ));
+            ui.label(&format!(
+                "[SUPER] + [{}]: open a terminal window",
+                &self.settings.bindings.terminal.to_uppercase()
+            ));
             ui.label("");
             ui.label("Click anywhere in this window (or tap any key) to close.");
         });

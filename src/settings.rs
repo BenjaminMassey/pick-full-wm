@@ -3,6 +3,7 @@ pub struct Applications {
     pub startups: Vec<String>,
     pub launcher: String,
     pub excluded: Vec<String>,
+    pub terminal: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -20,6 +21,7 @@ pub struct Bindings {
     pub fullscreen: String,
     pub help: String,
     pub key_hints: bool,
+    pub terminal: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -35,6 +37,7 @@ impl Settings {
                 startups: vec!["polybar".to_owned(), "rofi -show run".to_owned()],
                 launcher: "rofi -show run".to_owned(),
                 excluded: vec!["polybar".to_owned(), "rofi".to_owned()],
+                terminal: "alacritty".to_owned(),
             },
             layout: Layout {
                 main_size: "80%x96%".to_owned(),
@@ -57,6 +60,7 @@ impl Settings {
                 fullscreen: "f".to_owned(),
                 help: "h".to_owned(),
                 key_hints: true,
+                terminal: "t".to_owned(),
             },
         }
     }
