@@ -3,17 +3,18 @@ use std::{ffi::CStr, ptr};
 use x11::xlib;
 
 pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
-    println!(
-        "fill_main_space {} 0,0 {}x{}",
-        window, state.sizes.main.0 as c_uint, state.sizes.main.1 as c_uint,
-    );
+    let width = if state.settings.layout.conditional_full && state.side_windows.is_empty() {
+        state.sizes.screen.0
+    } else {
+        state.sizes.main.0
+    };
     unsafe {
         xlib::XMoveResizeWindow(
             state.display,
             window,
             state.position.0,
             state.position.1,
-            state.sizes.main.0 as c_uint,
+            width as c_uint,
             state.sizes.main.1 as c_uint,
         );
     }
@@ -71,6 +72,9 @@ pub fn layout_side_space(state: &mut crate::state::State) {
         }
     }
     audit_key_hints(state, &positions);
+    if let Some(main) = state.main_window {
+        fill_main_space(state, main);
+    }
 }
 
 fn audit_key_hints(state: &mut crate::state::State, positions: &[(c_int, c_int)]) {

@@ -9,6 +9,7 @@ excluded = [ "polybar", "rofi" ]
 main_size = "80%x96%"
 #main_size = "1800x1080"
 top_left = "0,4%"
+conditional_full = true # fill side if none
 
 [bindings]
 launcher = "space"

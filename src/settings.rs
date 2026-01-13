@@ -9,6 +9,7 @@ pub struct Applications {
 pub struct Layout {
     pub main_size: String,
     pub top_left: String,
+    pub conditional_full: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -38,6 +39,7 @@ impl Settings {
             layout: Layout {
                 main_size: "80%x96%".to_owned(),
                 top_left: "0,4%".to_owned(),
+                conditional_full: true,
             },
             bindings: Bindings {
                 launcher: "space".to_owned(),
