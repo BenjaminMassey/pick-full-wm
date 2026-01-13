@@ -40,8 +40,8 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Customizable position of area
 - [x] Keybind to open integrated help window
 - [x] Keybinding visual "hints" for side windows
+- [x] Work with Extended Window Manager Hints
 - [ ] Wallpaper support
-- [ ] Work with Extended Window Manager Hints
 - [ ] Tiling exceptions for pop-up style windows
 - [ ] Some implementation of virtual workspaces
 - [ ] Built-in multi-monitor support

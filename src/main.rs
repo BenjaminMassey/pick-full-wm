@@ -18,6 +18,7 @@ fn main() {
     safety::setup_error_handler();
     setup::dbus_init();
     let mut state = state::State::init();
+    setup::init_ewmh(&mut state);
     setup::run_startups(&mut state);
     setup::mouse_input(&mut state);
     setup::key_input(&mut state);

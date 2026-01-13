@@ -1,4 +1,5 @@
 use libc::{c_int, c_uint};
+use std::ffi::CString;
 use x11::xlib;
 
 pub fn run_startups(state: &mut crate::state::State) {
@@ -84,6 +85,7 @@ pub fn windows(state: &mut crate::state::State) {
         xlib::XSync(state.display, 0 /* False */);
     };
 }
+
 pub fn display(arg0: i8) -> *mut xlib::Display {
     unsafe {
         let display = xlib::XOpenDisplay(&arg0);
@@ -102,5 +104,101 @@ pub fn display(arg0: i8) -> *mut xlib::Display {
         xlib::XSync(display, xlib::False);
 
         display
+    }
+}
+
+pub fn init_ewmh(state: &mut crate::state::State) {
+    unsafe {
+        let root = xlib::XDefaultRootWindow(state.display);
+
+        // Create a dummy window for EWMH compliance check
+        let check_window = xlib::XCreateSimpleWindow(state.display, root, 0, 0, 1, 1, 0, 0, 0);
+
+        // Declare which EWMH atoms we support
+        let supported_atoms = [
+            "_NET_ACTIVE_WINDOW",
+            "_NET_WM_NAME",
+            "_NET_CLIENT_LIST",
+            "_NET_SUPPORTING_WM_CHECK",
+        ];
+
+        let mut atom_values: Vec<xlib::Atom> = Vec::new();
+        for atom_name in &supported_atoms {
+            let atom = xlib::XInternAtom(
+                state.display,
+                CString::new(*atom_name).unwrap().as_ptr(),
+                xlib::False,
+            );
+            atom_values.push(atom);
+        }
+
+        // Set _NET_SUPPORTED on root window
+        let net_supported = xlib::XInternAtom(
+            state.display,
+            CString::new("_NET_SUPPORTED").unwrap().as_ptr(),
+            xlib::False,
+        );
+        xlib::XChangeProperty(
+            state.display,
+            root,
+            net_supported,
+            xlib::XA_ATOM,
+            32,
+            xlib::PropModeReplace,
+            atom_values.as_ptr() as *const u8,
+            atom_values.len() as i32,
+        );
+
+        // Set _NET_SUPPORTING_WM_CHECK on root and check window
+        let net_supporting_wm_check = xlib::XInternAtom(
+            state.display,
+            CString::new("_NET_SUPPORTING_WM_CHECK").unwrap().as_ptr(),
+            xlib::False,
+        );
+        xlib::XChangeProperty(
+            state.display,
+            root,
+            net_supporting_wm_check,
+            xlib::XA_WINDOW,
+            32,
+            xlib::PropModeReplace,
+            &check_window as *const xlib::Window as *const u8,
+            1,
+        );
+        xlib::XChangeProperty(
+            state.display,
+            check_window,
+            net_supporting_wm_check,
+            xlib::XA_WINDOW,
+            32,
+            xlib::PropModeReplace,
+            &check_window as *const xlib::Window as *const u8,
+            1,
+        );
+
+        // Set WM name on check window
+        let net_wm_name = xlib::XInternAtom(
+            state.display,
+            CString::new("_NET_WM_NAME").unwrap().as_ptr(),
+            xlib::False,
+        );
+        let utf8_string = xlib::XInternAtom(
+            state.display,
+            CString::new("UTF8_STRING").unwrap().as_ptr(),
+            xlib::False,
+        );
+        let wm_name = CString::new("Pick-Full-WM").unwrap();
+        xlib::XChangeProperty(
+            state.display,
+            check_window,
+            net_wm_name,
+            utf8_string,
+            8,
+            xlib::PropModeReplace,
+            wm_name.as_ptr() as *const u8,
+            wm_name.as_bytes().len() as i32,
+        );
+
+        xlib::XSync(state.display, xlib::False);
     }
 }
