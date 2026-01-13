@@ -90,6 +90,21 @@ pub fn key(state: &mut crate::state::State) {
             }
         }
     }
+
+
+    let full_key = crate::keymap::parse_string(&state.settings.bindings.fullscreen);
+    if let Some(full_key) = full_key {
+        if keysym == full_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            if let Some(main) = state.main_window {
+                state.fullscreen = !state.fullscreen;
+                if state.fullscreen {
+                    crate::windows::fullscreen(state, main);
+                } else {
+                    crate::windows::fill_main_space(state, main);
+                }
+            }
+        }
+    }
 }
 
 pub fn destroy(state: &mut crate::state::State) {

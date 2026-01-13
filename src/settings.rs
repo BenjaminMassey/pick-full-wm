@@ -8,6 +8,7 @@ pub struct Applications {
 #[derive(serde::Deserialize, Clone)]
 pub struct Layout {
     pub main_size: String,
+    pub top_left: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -15,6 +16,7 @@ pub struct Bindings {
     pub launcher: String,
     pub swaps: Vec<String>,
     pub close_main: String,
+    pub fullscreen: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -33,11 +35,13 @@ impl Settings {
             },
             layout: Layout {
                 main_size: "80%x96%".to_owned(),
+                top_left: "0,4%".to_owned(),
             },
             bindings: Bindings {
                 launcher: "space".to_owned(),
                 swaps: vec!["j".to_owned(), "k".to_owned(), "l".to_owned(), ";".to_owned()],
                 close_main: "q".to_owned(),
+                fullscreen: "f".to_owned(),
             },
         }
     }

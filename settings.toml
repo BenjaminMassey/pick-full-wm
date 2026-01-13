@@ -8,8 +8,10 @@ excluded = [ "polybar", "rofi" ]
 [layout]
 main_size = "80%x96%"
 #main_size = "1800x1080"
+top_left = "0,4%"
 
 [bindings]
 launcher = "space"
 swaps = [ "j", "k", "l", ";" ]
-close_main = [ "q" ]
+close_main = "q"
+fullscreen = "f"

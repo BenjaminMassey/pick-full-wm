@@ -5,12 +5,28 @@ pub fn get_full_size(
     display_height: f32,
     config_string: &str,
 ) -> (c_int, c_int) {
-    println!("calculating sizing with string \"{}\"", config_string);
-    // TODO: backup scenarios, rather than asserts
-    assert!(config_string.contains("x"));
-    let pieces: Vec<String> = config_string.split("x").map(|s| s.to_owned()).collect();
+    config_parse(display_width, display_height, config_string, "x")
+}
+
+pub fn get_position(
+    display_width: f32,
+    display_height: f32,
+    config_string: &str,
+) -> (c_int, c_int) {
+    config_parse(display_width, display_height, config_string, ",")
+}
+
+fn config_parse(
+    display_width: f32,
+    display_height: f32,
+    config_string: &str,
+    deliminator: &str,
+) -> (c_int, c_int) {
+    assert!(config_string.contains(deliminator));
+    let pieces: Vec<String> = config_string.split(deliminator).map(|s| s.to_owned()).collect();
     assert_eq!(pieces.len(), 2);
     // TODO: assert that pieces are made of numbers
+    // TODO: backup scenarios, rather than asserts
     (
         percent_or_value(&pieces[0], display_width),
         percent_or_value(&pieces[1], display_height),

@@ -36,14 +36,14 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Implementation of x11 error handling
 - [x] Keyboard options for window switching
 - [x] Center mouse within and focus on main window on swap
+- [x] Toggle-able "full screen" mode
+- [x] Customizable position of area
 - [ ] Work with Extended Window Manager Hints
-- [ ] Toggle-able "full screen" mode
 - [ ] Tiling exceptions for pop-up style windows
 - [ ] Keybinding visual "hints" for side windows
 - [ ] Some implementation of virtual workspaces
 - [ ] Built-in multi-monitor support
 - [ ] Integration with "cargo deb"
-- [ ] Further customization, such as positioning
 - [ ] Support for screenshot and capture tools
 
 Some other bigger considerations are switching from unsafe xlib c bindings to proper XCB Rust bindings, and implementing a kind of preview system for side windows (instead of doing true direct changes to the size and position). These are TBD in terms of even desired or not.

@@ -11,8 +11,8 @@ pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
         xlib::XMoveResizeWindow(
             state.display,
             window,
-            0,
-            0,
+            state.position.0,
+            state.position.1,
             state.sizes.main.0 as c_uint,
             state.sizes.main.1 as c_uint,
         );
@@ -56,14 +56,28 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                 xlib::XMoveResizeWindow(
                     state.display,
                     *window,
-                    state.sizes.main.0 as c_int,
-                    section_pos as c_int, // TODO: investigate cast
-                    state.sizes.side.0 as c_uint,
+                    (state.position.0 + state.sizes.main.0 as i32) as c_int,
+                    (state.position.1 + section_pos as i32) as c_int, // TODO: investigate cast
+                    (state.sizes.side.0 as i32 - state.position.0) as c_uint,
                     section_size as c_uint, // TODO: investigate cast
                 );
             }
         }
     }
+}
+
+pub fn fullscreen(state: &mut crate::state::State, window: xlib::Window) {
+    unsafe {
+        xlib::XMoveResizeWindow(
+            state.display,
+            window,
+            0,
+            0,
+            state.sizes.screen.0 as c_uint,
+            state.sizes.screen.1 as c_uint,
+        );
+    }
+    focus_main(state);
 }
 
 pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window) -> bool {

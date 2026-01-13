@@ -6,9 +6,11 @@ pub struct State {
     pub settings: crate::settings::Settings,
     pub display: *mut xlib::Display,
     pub sizes: Sizes,
+    pub position: (i32, i32),
     pub event: xlib::XEvent,
     pub main_window: Option<xlib::Window>,
     pub side_windows: Vec<Option<xlib::Window>>,
+    pub fullscreen: bool,
 }
 impl State {
     pub fn init() -> Self {
@@ -20,14 +22,22 @@ impl State {
             std::process::exit(1);
         }
         let sizes = Sizes::init(&settings, arg0, display);
+        let position = crate::calc::get_position(
+            sizes.screen.0 as f32,
+            sizes.screen.1 as f32,
+            &settings.layout.top_left,
+        );
+        println!("Position: ({}, {})", position.0, position.1);
         let event: xlib::XEvent = unsafe { zeroed() };
         Self {
             settings,
             display,
             sizes,
+            position,
             event,
             main_window: None,
             side_windows: vec![],
+            fullscreen: false,
         }
     }
 }
