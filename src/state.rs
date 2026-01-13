@@ -18,7 +18,7 @@ impl State {
     pub fn init() -> Self {
         let settings = crate::settings::get_settings();
         let arg0 = 0x0_i8;
-        let display = unsafe { xlib::XOpenDisplay(&arg0) };
+        let display = crate::setup::display(arg0);
         if display.is_null() {
             eprintln!("Display \"{}\" is null.", arg0);
             std::process::exit(1);

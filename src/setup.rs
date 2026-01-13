@@ -38,7 +38,7 @@ pub fn mouse_input(state: &mut crate::state::State) {
 
 pub fn key_input(state: &mut crate::state::State) {
     for k in crate::keymap::get_key_strings(state) {
-        let key = crate::keymap::parse_string(&k); 
+        let key = crate::keymap::parse_string(&k);
         if let Some(key) = key {
             unsafe {
                 xlib::XGrabKey(
@@ -67,4 +67,23 @@ pub fn windows(state: &mut crate::state::State) {
         );
         xlib::XSync(state.display, 0 /* False */);
     };
+}
+pub fn display(arg0: i8) -> *mut xlib::Display {
+    unsafe {
+        let display = xlib::XOpenDisplay(&arg0);
+        let root = xlib::XDefaultRootWindow(display);
+        let screen = xlib::XDefaultScreen(display);
+
+        xlib::XUngrabKeyboard(display, xlib::CurrentTime);
+        xlib::XUngrabPointer(display, xlib::CurrentTime);
+        xlib::XUngrabServer(display);
+
+        xlib::XSetWindowBackground(display, root, xlib::XBlackPixel(display, screen));
+
+        xlib::XClearWindow(display, root);
+
+        xlib::XSync(display, xlib::False);
+
+        display
+    }
 }
