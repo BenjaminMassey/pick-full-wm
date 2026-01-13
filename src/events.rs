@@ -7,6 +7,15 @@ pub fn map_request(state: &mut crate::state::State) {
         return;
     }
     unsafe { xlib::XMapWindow(state.display, event.window) };
+    if let Some(key) = crate::windows::get_key_hint_window(state, event.window) {
+        if let Some(entry) = state.key_hint_windows.get_mut(&key) {
+            *entry = event.window;
+        } else {
+            state.key_hint_windows.insert(key, event.window);
+        }
+        crate::windows::layout_side_space(state);
+        return;
+    }
     if crate::windows::is_help_window(state, event.window) {
         crate::ewmh::set_active(state, event.window);
         unsafe { xlib::XFlush(state.display) };
@@ -54,6 +63,7 @@ pub fn button(state: &mut crate::state::State) {
             return;
         }
         unsafe { xlib::XDestroyWindow(state.display, event.subwindow) };
+        crate::windows::layout_side_space(state);
         unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
     }
 }

@@ -39,9 +39,9 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Toggle-able "full screen" mode
 - [x] Customizable position of area
 - [x] Keybind to open integrated help window
+- [x] Keybinding visual "hints" for side windows
 - [ ] Work with Extended Window Manager Hints
 - [ ] Tiling exceptions for pop-up style windows
-- [ ] Keybinding visual "hints" for side windows
 - [ ] Some implementation of virtual workspaces
 - [ ] Built-in multi-monitor support
 - [ ] Integration with "cargo deb"

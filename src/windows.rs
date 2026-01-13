@@ -40,6 +40,7 @@ pub fn remove_side_window(state: &mut crate::state::State, window: xlib::Window)
 }
 
 pub fn layout_side_space(state: &mut crate::state::State) {
+    let mut positions: Vec<(c_int, c_int)> = vec![];
     let section_size = state.sizes.side.1 as f32 / state.side_windows.len() as f32;
     for (index, window) in state.side_windows.iter().enumerate() {
         if let Some(window) = window {
@@ -52,16 +53,54 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                 state.sizes.side.0 as c_uint,
                 section_size as c_uint, // TODO: investigate cast
             );
+            let position = (
+                (state.position.0 + state.sizes.main.0 as i32) as c_int,
+                (state.position.1 + section_pos as i32) as c_int, // TODO: investigate cast
+            );
+            positions.push(position);
             unsafe {
                 xlib::XMoveResizeWindow(
                     state.display,
                     *window,
-                    (state.position.0 + state.sizes.main.0 as i32) as c_int,
-                    (state.position.1 + section_pos as i32) as c_int, // TODO: investigate cast
+                    position.0,
+                    position.1,
                     (state.sizes.side.0 as i32 - state.position.0) as c_uint,
                     section_size as c_uint, // TODO: investigate cast
                 );
             }
+        }
+    }
+    audit_key_hints(state, &positions);
+}
+
+fn audit_key_hints(state: &mut crate::state::State, positions: &[(c_int, c_int)]) {
+    if !state.settings.bindings.key_hints {
+        return;
+    }
+    for (i, k) in state.settings.bindings.swaps.iter().enumerate() {
+        if i < positions.len() {
+            if state.key_hint_windows.contains_key(k) {
+                unsafe {
+                    xlib::XMoveResizeWindow(
+                        state.display,
+                        state.key_hint_windows[k],
+                        positions[i].0,
+                        positions[i].1,
+                        50 as c_uint, // TODO: connect to src/bin/key_hint.rs settings
+                        50 as c_uint,
+                    );
+                    xlib::XRaiseWindow(state.display, state.key_hint_windows[k]);
+                    xlib::XFlush(state.display);
+                }
+            } else {
+                crate::binaries::key_hint(k);
+            }
+        } else if let Some(key_hint) = state.key_hint_windows.get(k) {
+            unsafe {
+                xlib::XDestroyWindow(state.display, *key_hint);
+                xlib::XFlush(state.display);
+            }
+            let _ = state.key_hint_windows.remove(k);
         }
     }
 }
@@ -81,7 +120,7 @@ pub fn fullscreen(state: &mut crate::state::State, window: xlib::Window) {
 }
 
 pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window) -> bool {
-    if is_help_window(state, window) {
+    if is_help_window(state, window) || get_key_hint_window(state, window).is_some() {
         return true;
     }
     if let Some(name) = get_window_name(state, window) {
@@ -95,13 +134,28 @@ pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window)
     false
 }
 
-pub fn is_help_window(state: &mut crate::state::State, window: xlib::Window) ->  bool {
+pub fn is_help_window(state: &mut crate::state::State, window: xlib::Window) -> bool {
     if let Some(name) = get_window_name(state, window)
         && name.contains("pfwm help")
     {
         return true;
     }
     false
+}
+
+pub fn get_key_hint_window(
+    state: &mut crate::state::State,
+    window: xlib::Window,
+) -> Option<String> {
+    if let Some(name) = get_window_name(state, window)
+        && name.contains("key_hint")
+    {
+        let pieces: Vec<&str> = name.split(" ").collect();
+        if pieces.len() == 2 {
+            return Some(pieces[1].to_owned());
+        }
+    }
+    None
 }
 
 pub fn get_window_name(state: &mut crate::state::State, window: xlib::Window) -> Option<String> {
@@ -129,14 +183,18 @@ pub fn run_command(command: &str) {
 }
 
 fn focus_main(state: &mut crate::state::State) {
-    if let Some(window) = state.main_window && crate::safety::window_exists(state, window) {
+    if let Some(window) = state.main_window
+        && crate::safety::window_exists(state, window)
+    {
         unsafe {
             xlib::XWarpPointer(
                 state.display,
                 0,
                 window,
-                0, 0,
-                0, 0,
+                0,
+                0,
+                0,
+                0,
                 (state.sizes.main.0 as f32 * 0.5f32) as c_int,
                 (state.sizes.main.1 as f32 * 0.5f32) as c_int,
             );

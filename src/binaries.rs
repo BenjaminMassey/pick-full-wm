@@ -1,10 +1,14 @@
 pub fn help_window() {
     if let Some(dir) = get_pfwm_dir() {
         let path = &format!("{}/help_window", dir);
-        println!("!!! : {}", &path);
         crate::windows::run_command(&path);
-    } else {
-        eprintln!("failed to get pfwm dir");
+    }
+}
+
+pub fn key_hint(key: &str) {
+    if let Some(dir) = get_pfwm_dir() {
+        let path = &format!("{}/key_hint \"{}\"", dir, key);
+        crate::windows::run_command(&path);
     }
 }
 
@@ -14,5 +18,6 @@ fn get_pfwm_dir() -> Option<String> {
             return Some(dir.to_str()?.to_owned());
         }
     }
+    eprintln!("failed to get pfwm dir");
     None
 }

@@ -18,6 +18,7 @@ pub struct Bindings {
     pub close_main: String,
     pub fullscreen: String,
     pub help: String,
+    pub key_hints: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -40,10 +41,20 @@ impl Settings {
             },
             bindings: Bindings {
                 launcher: "space".to_owned(),
-                swaps: vec!["j".to_owned(), "k".to_owned(), "l".to_owned(), ";".to_owned()],
+                swaps: vec![
+                    "j".to_owned(),
+                    "k".to_owned(),
+                    "l".to_owned(),
+                    ";".to_owned(),
+                    "u".to_owned(),
+                    "i".to_owned(),
+                    "o".to_owned(),
+                    "p".to_owned(),
+                ],
                 close_main: "q".to_owned(),
                 fullscreen: "f".to_owned(),
                 help: "h".to_owned(),
+                key_hints: true,
             },
         }
     }

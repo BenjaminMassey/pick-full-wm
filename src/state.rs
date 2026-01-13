@@ -1,5 +1,5 @@
 use libc::c_int;
-use std::mem::zeroed;
+use std::{collections::HashMap, mem::zeroed};
 use x11::xlib;
 
 pub struct State {
@@ -11,6 +11,7 @@ pub struct State {
     pub main_window: Option<xlib::Window>,
     pub side_windows: Vec<Option<xlib::Window>>,
     pub help_window: Option<xlib::Window>,
+    pub key_hint_windows: HashMap<String, xlib::Window>,
     pub fullscreen: bool,
 }
 impl State {
@@ -39,6 +40,7 @@ impl State {
             main_window: None,
             side_windows: vec![],
             help_window: None,
+            key_hint_windows: HashMap::new(),
             fullscreen: false,
         }
     }

@@ -12,7 +12,8 @@ top_left = "0,4%"
 
 [bindings]
 launcher = "space"
-swaps = [ "j", "k", "l", ";" ]
+swaps = [ "j", "k", "l", ";", "u", "i", "o", "p" ]
 close_main = "q"
 fullscreen = "f"
 help = "h"
+key_hints = true
