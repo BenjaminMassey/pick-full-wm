@@ -7,6 +7,20 @@ pub fn run_startups(state: &mut crate::state::State) {
     }
 }
 
+pub fn dbus_init() {
+    if std::process::Command::new("which")
+        .arg("dbus-launch")
+        .status()
+        .is_ok()
+        && std::env::var("DBUS_SESSION_BUS_ADDRESS").is_err()
+    {
+        std::process::Command::new("dbus-launch")
+            .arg("--exit-with-session")
+            .spawn()
+            .ok();
+    }
+} // helps with startup for certain apps like KDE ones
+
 pub fn mouse_input(state: &mut crate::state::State) {
     unsafe {
         xlib::XGrabButton(
@@ -37,6 +51,8 @@ pub fn mouse_input(state: &mut crate::state::State) {
 }
 
 pub fn key_input(state: &mut crate::state::State) {
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    // allows time for login manager to ungrab properly
     for k in crate::keymap::get_key_strings(state) {
         let key = crate::keymap::parse_string(&k);
         if let Some(key) = key {
@@ -77,6 +93,7 @@ pub fn display(arg0: i8) -> *mut xlib::Display {
         xlib::XUngrabKeyboard(display, xlib::CurrentTime);
         xlib::XUngrabPointer(display, xlib::CurrentTime);
         xlib::XUngrabServer(display);
+        xlib::XUngrabKey(display, xlib::AnyKey, xlib::AnyModifier as u32, root);
 
         xlib::XSetWindowBackground(display, root, xlib::XBlackPixel(display, screen));
 
