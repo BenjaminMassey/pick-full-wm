@@ -15,3 +15,4 @@ launcher = "space"
 swaps = [ "j", "k", "l", ";" ]
 close_main = "q"
 fullscreen = "f"
+help = "h"

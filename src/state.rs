@@ -10,6 +10,7 @@ pub struct State {
     pub event: xlib::XEvent,
     pub main_window: Option<xlib::Window>,
     pub side_windows: Vec<Option<xlib::Window>>,
+    pub help_window: Option<xlib::Window>,
     pub fullscreen: bool,
 }
 impl State {
@@ -37,6 +38,7 @@ impl State {
             event,
             main_window: None,
             side_windows: vec![],
+            help_window: None,
             fullscreen: false,
         }
     }

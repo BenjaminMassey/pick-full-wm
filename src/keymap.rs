@@ -8,6 +8,7 @@ pub fn get_key_strings(state: &mut crate::state::State) -> Vec<String> {
     }
     keys.push(state.settings.bindings.close_main.clone());
     keys.push(state.settings.bindings.fullscreen.clone());
+    keys.push(state.settings.bindings.help.clone());
     keys
 }
 

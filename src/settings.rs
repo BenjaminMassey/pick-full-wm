@@ -17,6 +17,7 @@ pub struct Bindings {
     pub swaps: Vec<String>,
     pub close_main: String,
     pub fullscreen: String,
+    pub help: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -42,6 +43,7 @@ impl Settings {
                 swaps: vec!["j".to_owned(), "k".to_owned(), "l".to_owned(), ";".to_owned()],
                 close_main: "q".to_owned(),
                 fullscreen: "f".to_owned(),
+                help: "h".to_owned(),
             },
         }
     }

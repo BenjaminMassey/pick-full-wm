@@ -3,6 +3,7 @@ extern crate x11;
 
 use x11::xlib;
 
+mod binaries;
 mod calc;
 mod events;
 mod ewmh;

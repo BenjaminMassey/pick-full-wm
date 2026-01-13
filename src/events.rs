@@ -7,6 +7,12 @@ pub fn map_request(state: &mut crate::state::State) {
         return;
     }
     unsafe { xlib::XMapWindow(state.display, event.window) };
+    if crate::windows::is_help_window(state, event.window) {
+        crate::ewmh::set_active(state, event.window);
+        unsafe { xlib::XFlush(state.display) };
+        state.help_window = Some(event.window);
+        return;
+    }
     if crate::windows::is_excepted_window(state, event.window) {
         return;
     }
@@ -19,7 +25,9 @@ pub fn map_request(state: &mut crate::state::State) {
 
 pub fn button(state: &mut crate::state::State) {
     let event: xlib::XButtonEvent = From::from(state.event);
-    if !crate::safety::window_exists(state, event.window) || crate::windows::is_excepted_window(state, event.subwindow) {
+    if !crate::safety::window_exists(state, event.window)
+        || crate::windows::is_excepted_window(state, event.subwindow)
+    {
         unsafe { xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime) };
         return;
     }
@@ -91,7 +99,6 @@ pub fn key(state: &mut crate::state::State) {
         }
     }
 
-
     let full_key = crate::keymap::parse_string(&state.settings.bindings.fullscreen);
     if let Some(full_key) = full_key {
         if keysym == full_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
@@ -105,10 +112,27 @@ pub fn key(state: &mut crate::state::State) {
             }
         }
     }
+
+    let help_key = crate::keymap::parse_string(&state.settings.bindings.help);
+    if let Some(help_key) = help_key {
+        if keysym == help_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            crate::binaries::help_window();
+        }
+    }
 }
 
 pub fn destroy(state: &mut crate::state::State) {
     let event: xlib::XDestroyWindowEvent = From::from(state.event);
+    if let Some(help) = state.help_window
+        && event.window == help
+    {
+        if let Some(main_window) = state.main_window {
+            crate::ewmh::set_active(state, main_window);
+            unsafe { xlib::XFlush(state.display) };
+        }
+        state.help_window = None;
+        return;
+    }
     if let Some(main_window) = state.main_window {
         if event.window == main_window {
             if !state.side_windows.is_empty() {

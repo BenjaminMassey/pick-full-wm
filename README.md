@@ -38,6 +38,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Center mouse within and focus on main window on swap
 - [x] Toggle-able "full screen" mode
 - [x] Customizable position of area
+- [x] Keybind to open integrated help window
 - [ ] Work with Extended Window Manager Hints
 - [ ] Tiling exceptions for pop-up style windows
 - [ ] Keybinding visual "hints" for side windows

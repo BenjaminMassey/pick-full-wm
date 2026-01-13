@@ -81,6 +81,9 @@ pub fn fullscreen(state: &mut crate::state::State, window: xlib::Window) {
 }
 
 pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window) -> bool {
+    if is_help_window(state, window) {
+        return true;
+    }
     if let Some(name) = get_window_name(state, window) {
         println!("window name: {}", &name);
         for exception in &state.settings.applications.excluded {
@@ -92,7 +95,16 @@ pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window)
     false
 }
 
-fn get_window_name(state: &mut crate::state::State, window: xlib::Window) -> Option<String> {
+pub fn is_help_window(state: &mut crate::state::State, window: xlib::Window) ->  bool {
+    if let Some(name) = get_window_name(state, window)
+        && name.contains("pfwm help")
+    {
+        return true;
+    }
+    false
+}
+
+pub fn get_window_name(state: &mut crate::state::State, window: xlib::Window) -> Option<String> {
     let mut name_ptr: *mut i8 = ptr::null_mut();
     let fetch = unsafe { xlib::XFetchName(state.display, window, &mut name_ptr) };
     if fetch != 0 && !name_ptr.is_null() {
