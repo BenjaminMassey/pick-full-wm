@@ -3,11 +3,12 @@ use std::{ffi::CStr, ptr};
 use x11::xlib;
 
 pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
-    let width = if state.settings.layout.conditional_full && state.workspace().side_windows.is_empty() {
-        state.sizes.screen.0
-    } else {
-        state.sizes.main.0
-    };
+    let width =
+        if state.settings.layout.conditional_full && state.workspace().side_windows.is_empty() {
+            state.sizes.screen.0
+        } else {
+            state.sizes.main.0
+        };
     unsafe {
         xlib::XMoveResizeWindow(
             state.display,
@@ -190,21 +191,7 @@ fn focus_main(state: &mut crate::state::State) {
     if let Some(window) = state.workspace().main_window
         && crate::safety::window_exists(state, window)
     {
-        unsafe {
-            xlib::XWarpPointer(
-                state.display,
-                0,
-                window,
-                0,
-                0,
-                0,
-                0,
-                (state.sizes.main.0 as f32 * 0.5f32) as c_int,
-                (state.sizes.main.1 as f32 * 0.5f32) as c_int,
-            );
-            crate::ewmh::set_active(state, window);
-            xlib::XFlush(state.display);
-        }
+        crate::ewmh::set_active(state, window);
     }
 }
 
