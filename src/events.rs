@@ -11,7 +11,10 @@ pub fn map_request(state: &mut crate::state::State) {
         if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
             *entry = event.window;
         } else {
-            state.mut_workspace().key_hint_windows.insert(key, event.window);
+            state
+                .mut_workspace()
+                .key_hint_windows
+                .insert(key, event.window);
         }
         crate::windows::layout_side_space(state);
         return;
@@ -137,10 +140,20 @@ pub fn key(state: &mut crate::state::State) {
         }
     }
 
-    for (index, key) in state.settings.bindings.workspaces.clone().iter().enumerate() {
+    for (index, key) in state
+        .settings
+        .bindings
+        .workspaces
+        .clone()
+        .iter()
+        .enumerate()
+    {
         let workspace_key = crate::keymap::parse_string(key);
         if let Some(workspace_key) = workspace_key {
-            if keysym == workspace_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            if keysym == workspace_key as u64
+                && (event.state & xlib::Mod4Mask) != 0
+                && state.current_workspace != index
+            {
                 state.current_workspace = index;
                 crate::windows::switch_workspace(state);
             }
@@ -186,5 +199,25 @@ pub fn destroy(state: &mut crate::state::State) {
     crate::windows::layout_side_space(state);
     if state.workspace().main_window.is_none() {
         crate::ewmh::clear_active(state);
+    }
+}
+
+pub fn client_message(state: &mut crate::state::State) {
+    let event: xlib::XClientMessageEvent = From::from(state.event);
+    let net_current_desktop = unsafe {
+        xlib::XInternAtom(
+            state.display,
+            std::ffi::CString::new("_NET_CURRENT_DESKTOP")
+                .unwrap()
+                .as_ptr(),
+            xlib::False,
+        )
+    };
+    if event.message_type == net_current_desktop {
+        let requested_workspace = event.data.get_long(0) as usize;
+        if state.current_workspace != requested_workspace {
+            state.current_workspace = requested_workspace;
+            crate::windows::switch_workspace(state);
+        }
     }
 }

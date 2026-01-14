@@ -45,6 +45,10 @@ fn main() {
                     println!("DestroyNotify event!");
                     events::destroy(&mut state);
                 }
+                xlib::ClientMessage => {
+                    println!("ClientMessage event!");
+                    events::client_message(&mut state);
+                }
                 _ => {}
             };
         }
