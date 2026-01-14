@@ -34,3 +34,25 @@ pub fn set_active(state: &mut crate::state::State, window: xlib::Window) {
 pub fn clear_active(state: &mut crate::state::State) {
     set_active(state, 0);
 }
+
+pub fn update_workspace(state: &crate::state::State) {
+    unsafe {
+        let net_current_desktop = xlib::XInternAtom(
+            state.display,
+            CString::new("_NET_CURRENT_DESKTOP").unwrap().as_ptr(),
+            xlib::False
+        );
+        let current_desktop = state.current_workspace as u64;
+        xlib::XChangeProperty(
+            state.display,
+            xlib::XDefaultRootWindow(state.display),
+            net_current_desktop,
+            xlib::XA_CARDINAL,
+            32,
+            xlib::PropModeReplace,
+            &current_desktop as *const u64 as *const u8,
+            1,
+        );
+        xlib::XFlush(state.display);
+    }
+}

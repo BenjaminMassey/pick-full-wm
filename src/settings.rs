@@ -22,6 +22,7 @@ pub struct Bindings {
     pub help: String,
     pub key_hints: bool,
     pub terminal: String,
+    pub workspaces: Vec<String>,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -61,6 +62,12 @@ impl Settings {
                 help: "h".to_owned(),
                 key_hints: true,
                 terminal: "t".to_owned(),
+                workspaces: vec![
+                    "1".to_owned(),
+                    "2".to_owned(),
+                    "3".to_owned(),
+                    "4".to_owned(),
+                ],
             },
         }
     }

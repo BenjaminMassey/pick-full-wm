@@ -120,6 +120,9 @@ pub fn init_ewmh(state: &mut crate::state::State) {
             "_NET_WM_NAME",
             "_NET_CLIENT_LIST",
             "_NET_SUPPORTING_WM_CHECK",
+            "_NET_NUMBER_OF_DESKTOPS",
+            "_NET_CURRENT_DESKTOP",
+            "_NET_DESKTOP_NAMES",
         ];
 
         let mut atom_values: Vec<xlib::Atom> = Vec::new();
@@ -197,6 +200,62 @@ pub fn init_ewmh(state: &mut crate::state::State) {
             xlib::PropModeReplace,
             wm_name.as_ptr() as *const u8,
             wm_name.as_bytes().len() as i32,
+        );
+
+        let net_number_of_desktops = xlib::XInternAtom(
+            state.display,
+            CString::new("_NET_NUMBER_OF_DESKTOPS").unwrap().as_ptr(),
+            xlib::False,
+        );
+        let num_desktops = state.workspaces.len() as u64;
+        xlib::XChangeProperty(
+            state.display,
+            root,
+            net_number_of_desktops,
+            xlib::XA_CARDINAL,
+            32,
+            xlib::PropModeReplace,
+            &num_desktops as *const u64 as *const u8,
+            1,
+        );
+
+        let net_current_desktop = xlib::XInternAtom(
+            state.display,
+            CString::new("_NET_CURRENT_DESKTOP").unwrap().as_ptr(),
+            xlib::False,
+        );
+        let current_desktop = 0 as u64;
+        xlib::XChangeProperty(
+            state.display,
+            root,
+            net_current_desktop,
+            xlib::XA_CARDINAL,
+            32,
+            xlib::PropModeReplace,
+            &current_desktop as *const u64 as *const u8,
+            1,
+        );
+
+        let net_desktop_names = xlib::XInternAtom(
+            state.display,
+            CString::new("_NET_DESKTOP_NAMES").unwrap().as_ptr(),
+            xlib::False,
+        );
+        let utf8_string = xlib::XInternAtom(
+            state.display,
+            CString::new("UTF8_STRING").unwrap().as_ptr(),
+            xlib::False,
+        );
+        let names = state.settings.bindings.workspaces.clone().join("\0") + "\0";
+        xlib::XChangeProperty(
+            state.display,
+            root,
+            net_desktop_names,
+            utf8_string,
+            8,
+            xlib::PropModeReplace,
+            names.as_ptr(),
+            names.len() as i32,
         );
 
         xlib::XSync(state.display, xlib::False);

@@ -8,10 +8,10 @@ pub fn map_request(state: &mut crate::state::State) {
     }
     unsafe { xlib::XMapWindow(state.display, event.window) };
     if let Some(key) = crate::windows::get_key_hint_window(state, event.window) {
-        if let Some(entry) = state.key_hint_windows.get_mut(&key) {
+        if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
             *entry = event.window;
         } else {
-            state.key_hint_windows.insert(key, event.window);
+            state.mut_workspace().key_hint_windows.insert(key, event.window);
         }
         crate::windows::layout_side_space(state);
         return;
@@ -19,13 +19,13 @@ pub fn map_request(state: &mut crate::state::State) {
     if crate::windows::is_help_window(state, event.window) {
         crate::ewmh::set_active(state, event.window);
         unsafe { xlib::XFlush(state.display) };
-        state.help_window = Some(event.window);
+        state.mut_workspace().help_window = Some(event.window);
         return;
     }
     if crate::windows::is_excepted_window(state, event.window) {
         return;
     }
-    if state.main_window.is_none() {
+    if state.workspace().main_window.is_none() {
         crate::windows::fill_main_space(state, event.window);
     } else {
         crate::windows::send_side_space(state, event.window);
@@ -42,7 +42,7 @@ pub fn button(state: &mut crate::state::State) {
     }
     if event.button == 1 {
         // left click
-        if let Some(existing) = state.main_window {
+        if let Some(existing) = state.workspace().main_window {
             if existing == event.subwindow {
                 unsafe {
                     xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime)
@@ -56,7 +56,7 @@ pub fn button(state: &mut crate::state::State) {
         }
     } else if event.button == 3 {
         // right click
-        if let Some(existing) = state.main_window
+        if let Some(existing) = state.workspace().main_window
             && existing == event.subwindow
         {
             unsafe { xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime) };
@@ -80,15 +80,15 @@ pub fn key(state: &mut crate::state::State) {
     }
 
     for (index, key) in state.settings.bindings.swaps.clone().iter().enumerate() {
-        if index >= state.side_windows.len() {
+        if index >= state.workspace().side_windows.len() {
             continue;
         }
         let swap_key = crate::keymap::parse_string(key);
         if let Some(swap_key) = swap_key {
             if keysym == swap_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
-                let target = state.side_windows[index];
+                let target = state.workspace().side_windows[index];
                 if let Some(target) = target {
-                    let existing = state.main_window.clone();
+                    let existing = state.workspace().main_window.clone();
                     crate::windows::remove_side_window(state, target);
                     crate::windows::fill_main_space(state, target);
                     if let Some(existing) = existing {
@@ -102,7 +102,7 @@ pub fn key(state: &mut crate::state::State) {
     let close_key = crate::keymap::parse_string(&state.settings.bindings.close_main);
     if let Some(close_key) = close_key {
         if keysym == close_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
-            if let Some(main) = state.main_window {
+            if let Some(main) = state.workspace().main_window {
                 unsafe { xlib::XDestroyWindow(state.display, main) };
                 unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
             }
@@ -112,9 +112,9 @@ pub fn key(state: &mut crate::state::State) {
     let full_key = crate::keymap::parse_string(&state.settings.bindings.fullscreen);
     if let Some(full_key) = full_key {
         if keysym == full_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
-            if let Some(main) = state.main_window {
-                state.fullscreen = !state.fullscreen;
-                if state.fullscreen {
+            if let Some(main) = state.workspace().main_window {
+                state.mut_workspace().fullscreen = !state.workspace().fullscreen;
+                if state.workspace().fullscreen {
                     crate::windows::fullscreen(state, main);
                 } else {
                     crate::windows::fill_main_space(state, main);
@@ -136,36 +136,55 @@ pub fn key(state: &mut crate::state::State) {
             crate::windows::run_command(&state.settings.applications.terminal);
         }
     }
+
+    for (index, key) in state.settings.bindings.workspaces.clone().iter().enumerate() {
+        let workspace_key = crate::keymap::parse_string(key);
+        if let Some(workspace_key) = workspace_key {
+            if keysym == workspace_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+                state.current_workspace = index;
+                crate::windows::switch_workspace(state);
+            }
+        }
+    }
 }
 
 pub fn destroy(state: &mut crate::state::State) {
     let event: xlib::XDestroyWindowEvent = From::from(state.event);
-    if let Some(help) = state.help_window
-        && event.window == help
-    {
-        if let Some(main_window) = state.main_window {
-            crate::ewmh::set_active(state, main_window);
-            unsafe { xlib::XFlush(state.display) };
+    for i in 0..state.workspaces.len() {
+        if let Some(help) = state.workspaces[i].help_window
+            && event.window == help
+        {
+            if let Some(main_window) = state.workspaces[i].main_window
+                && state.current_workspace == i
+            {
+                crate::ewmh::set_active(state, main_window);
+                unsafe { xlib::XFlush(state.display) };
+            }
+            state.workspaces[i].help_window = None;
+            return;
         }
-        state.help_window = None;
-        return;
-    }
-    if let Some(main_window) = state.main_window {
-        if event.window == main_window {
-            if !state.side_windows.is_empty() {
-                if let Some(target) = state.side_windows[0] {
-                    crate::windows::remove_side_window(state, target);
-                    crate::windows::fill_main_space(state, target);
+        let real_workspace = state.current_workspace.clone(); // TODO: gross, for windows.rs calls
+        state.current_workspace = i; // TODO: gross, for windows.rs calls
+        if let Some(main_window) = state.workspaces[i].main_window {
+            if event.window == main_window {
+                if !state.workspaces[i].side_windows.is_empty() {
+                    if let Some(target) = state.workspaces[i].side_windows[0]
+                        && state.current_workspace == i
+                    {
+                        crate::windows::remove_side_window(state, target);
+                        crate::windows::fill_main_space(state, target);
+                    }
+                } else {
+                    state.mut_workspace().main_window = None;
                 }
             } else {
-                state.main_window = None;
+                crate::windows::remove_side_window(state, event.window);
             }
-        } else {
-            crate::windows::remove_side_window(state, event.window);
         }
+        state.current_workspace = real_workspace; // TODO: gross, for windows.rs calls
     }
     crate::windows::layout_side_space(state);
-    if state.main_window.is_none() {
+    if state.workspace().main_window.is_none() {
         crate::ewmh::clear_active(state);
     }
 }

@@ -3,7 +3,7 @@ use std::{ffi::CStr, ptr};
 use x11::xlib;
 
 pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
-    let width = if state.settings.layout.conditional_full && state.side_windows.is_empty() {
+    let width = if state.settings.layout.conditional_full && state.workspace().side_windows.is_empty() {
         state.sizes.screen.0
     } else {
         state.sizes.main.0
@@ -18,32 +18,32 @@ pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
             state.sizes.main.1 as c_uint,
         );
     }
-    state.main_window = Some(window);
+    state.mut_workspace().main_window = Some(window);
     focus_main(state);
 }
 
 pub fn send_side_space(state: &mut crate::state::State, window: xlib::Window) {
     remove_side_window(state, window);
-    state.side_windows.push(Some(window));
+    state.mut_workspace().side_windows.push(Some(window));
     layout_side_space(state);
 }
 
 pub fn remove_side_window(state: &mut crate::state::State, window: xlib::Window) {
     let mut removes: Vec<usize> = vec![];
-    for (index, side_window) in state.side_windows.iter().enumerate() {
+    for (index, side_window) in state.workspace().side_windows.iter().enumerate() {
         if side_window.is_none() || side_window.unwrap() == window {
             removes.push(index);
         }
     }
     for index in removes {
-        state.side_windows.remove(index);
+        state.mut_workspace().side_windows.remove(index);
     }
 }
 
 pub fn layout_side_space(state: &mut crate::state::State) {
     let mut positions: Vec<(c_int, c_int)> = vec![];
-    let section_size = state.sizes.side.1 as f32 / state.side_windows.len() as f32;
-    for (index, window) in state.side_windows.iter().enumerate() {
+    let section_size = state.sizes.side.1 as f32 / state.workspace().side_windows.len() as f32;
+    for (index, window) in state.workspace().side_windows.iter().enumerate() {
         if let Some(window) = window {
             let section_pos = section_size * index as f32;
             println!(
@@ -72,7 +72,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
         }
     }
     audit_key_hints(state, &positions);
-    if let Some(main) = state.main_window {
+    if let Some(main) = state.workspace().main_window {
         fill_main_space(state, main);
     }
 }
@@ -81,30 +81,30 @@ fn audit_key_hints(state: &mut crate::state::State, positions: &[(c_int, c_int)]
     if !state.settings.bindings.key_hints {
         return;
     }
-    for (i, k) in state.settings.bindings.swaps.iter().enumerate() {
+    for (i, k) in state.settings.bindings.swaps.clone().iter().enumerate() {
         if i < positions.len() {
-            if state.key_hint_windows.contains_key(k) {
+            if state.workspace().key_hint_windows.contains_key(k) {
                 unsafe {
                     xlib::XMoveResizeWindow(
                         state.display,
-                        state.key_hint_windows[k],
+                        state.workspace().key_hint_windows[k],
                         positions[i].0,
                         positions[i].1,
                         50 as c_uint, // TODO: connect to src/bin/key_hint.rs settings
                         50 as c_uint,
                     );
-                    xlib::XRaiseWindow(state.display, state.key_hint_windows[k]);
+                    xlib::XRaiseWindow(state.display, state.workspace().key_hint_windows[k]);
                     xlib::XFlush(state.display);
                 }
             } else {
                 crate::binaries::key_hint(k);
             }
-        } else if let Some(key_hint) = state.key_hint_windows.get(k) {
+        } else if let Some(key_hint) = state.workspace().key_hint_windows.get(k) {
             unsafe {
                 xlib::XDestroyWindow(state.display, *key_hint);
                 xlib::XFlush(state.display);
             }
-            let _ = state.key_hint_windows.remove(k);
+            let _ = state.mut_workspace().key_hint_windows.remove(k);
         }
     }
 }
@@ -187,7 +187,7 @@ pub fn run_command(command: &str) {
 }
 
 fn focus_main(state: &mut crate::state::State) {
-    if let Some(window) = state.main_window
+    if let Some(window) = state.workspace().main_window
         && crate::safety::window_exists(state, window)
     {
         unsafe {
@@ -206,4 +206,47 @@ fn focus_main(state: &mut crate::state::State) {
             xlib::XFlush(state.display);
         }
     }
+}
+
+pub fn switch_workspace(state: &mut crate::state::State) {
+    for index in 0..state.workspaces.len() {
+        if index == state.current_workspace {
+            if let Some(main) = state.workspaces[index].main_window {
+                unsafe { xlib::XMapWindow(state.display, main) };
+            }
+            for window in &state.workspaces[index].side_windows {
+                if let Some(window) = window {
+                    unsafe { xlib::XMapWindow(state.display, *window) };
+                }
+            }
+            if let Some(help) = state.workspaces[index].help_window {
+                unsafe { xlib::XMapWindow(state.display, help) };
+            }
+            for (_, window) in &state.workspaces[index].key_hint_windows {
+                unsafe { xlib::XMapWindow(state.display, *window) };
+            }
+        } else {
+            if let Some(main) = state.workspaces[index].main_window {
+                unsafe { xlib::XUnmapWindow(state.display, main) };
+            }
+            for window in &state.workspaces[index].side_windows {
+                if let Some(window) = window {
+                    unsafe { xlib::XUnmapWindow(state.display, *window) };
+                }
+            }
+            if let Some(help) = state.workspaces[index].help_window {
+                unsafe { xlib::XUnmapWindow(state.display, help) };
+            }
+            for (_, window) in &state.workspaces[index].key_hint_windows {
+                unsafe { xlib::XUnmapWindow(state.display, *window) };
+            }
+        }
+    }
+    unsafe { xlib::XFlush(state.display) };
+    crate::ewmh::update_workspace(state);
+    crate::ewmh::clear_active(state);
+    if let Some(main) = state.workspace().main_window {
+        fill_main_space(state, main);
+    }
+    layout_side_space(state);
 }

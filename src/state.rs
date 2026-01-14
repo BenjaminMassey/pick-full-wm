@@ -8,11 +8,8 @@ pub struct State {
     pub sizes: Sizes,
     pub position: (i32, i32),
     pub event: xlib::XEvent,
-    pub main_window: Option<xlib::Window>,
-    pub side_windows: Vec<Option<xlib::Window>>,
-    pub help_window: Option<xlib::Window>,
-    pub key_hint_windows: HashMap<String, xlib::Window>,
-    pub fullscreen: bool,
+    pub workspaces: Vec<Workspace>,
+    pub current_workspace: usize,
 }
 impl State {
     pub fn init() -> Self {
@@ -30,6 +27,10 @@ impl State {
             &settings.layout.top_left,
         );
         println!("Position: ({}, {})", position.0, position.1);
+        let mut workspaces: Vec<Workspace> = vec![];
+        for _ in 0..settings.bindings.workspaces.len() {
+            workspaces.push(Workspace::new());
+        }
         let event: xlib::XEvent = unsafe { zeroed() };
         Self {
             settings,
@@ -37,12 +38,16 @@ impl State {
             sizes,
             position,
             event,
-            main_window: None,
-            side_windows: vec![],
-            help_window: None,
-            key_hint_windows: HashMap::new(),
-            fullscreen: false,
+            workspaces,
+            current_workspace: 0,
         }
+    }
+    
+    pub fn workspace(&self) -> &Workspace {
+        &self.workspaces[self.current_workspace]
+    }
+    pub fn mut_workspace(&mut self) -> &mut Workspace {
+        &mut self.workspaces[self.current_workspace]
     }
 }
 
@@ -76,5 +81,24 @@ impl Sizes {
             "Calculate Sizes:\n\tScreen: {}x{}\n\tMain: {}x{}\n\tSide: {}x{}",
             self.screen.0, self.screen.1, self.main.0, self.main.1, self.side.0, self.side.1
         );
+    }
+}
+
+pub struct Workspace {
+    pub main_window: Option<xlib::Window>,
+    pub side_windows: Vec<Option<xlib::Window>>,
+    pub help_window: Option<xlib::Window>,
+    pub key_hint_windows: HashMap<String, xlib::Window>,
+    pub fullscreen: bool,
+}
+impl Workspace {
+    fn new() -> Self {
+        Self {
+            main_window: None,
+            side_windows: vec![],
+            help_window: None,
+            key_hint_windows: HashMap::new(),
+            fullscreen: false,
+        }
     }
 }
