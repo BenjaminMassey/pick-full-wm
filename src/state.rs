@@ -8,6 +8,7 @@ pub struct State {
     pub event: xlib::XEvent,
     pub monitors: Vec<Monitor>,
     pub current_monitor: usize,
+    pub current_workspace: usize,
 }
 impl State {
     pub fn init() -> Self {
@@ -34,6 +35,7 @@ impl State {
             event,
             monitors,
             current_monitor: 0,
+            current_workspace: 0,
         }
     }
     pub fn monitor(&self) -> &Monitor {
@@ -43,10 +45,10 @@ impl State {
         &mut self.monitors[self.current_monitor]
     }
     pub fn workspace(&self) -> &Workspace {
-        &self.monitor().workspaces[self.monitor().current_workspace]
+        &self.monitor().workspaces[self.current_workspace]
     }
     pub fn mut_workspace(&mut self) -> &mut Workspace {
-        let current_workspace = self.monitor().current_workspace;
+        let current_workspace = self.current_workspace;
         &mut self.mut_monitor().workspaces[current_workspace]
     }
 }
@@ -54,7 +56,6 @@ pub struct Monitor {
     pub sizes: Sizes,
     pub position: (i32, i32),
     pub workspaces: Vec<Workspace>,
-    pub current_workspace: usize,
 }
 impl Monitor {
     pub fn new(
@@ -80,7 +81,6 @@ impl Monitor {
             sizes,
             position,
             workspaces,
-            current_workspace: 0,
         }
     }
     pub fn print(&self) {

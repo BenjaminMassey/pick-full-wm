@@ -200,44 +200,52 @@ pub fn focus_main(state: &mut crate::state::State) {
 }
 
 pub fn switch_workspace(state: &mut crate::state::State) {
-    for index in 0..state.monitor().workspaces.len() {
-        if index == state.monitor().current_workspace {
-            if let Some(main) = state.monitor().workspaces[index].main_window {
-                unsafe { xlib::XMapWindow(state.display, main) };
-            }
-            for window in &state.monitor().workspaces[index].side_windows {
-                if let Some(window) = window {
+    for monitor in &state.monitors {
+        for index in 0..monitor.workspaces.len() {
+            if index == state.current_workspace {
+                if let Some(main) = monitor.workspaces[index].main_window {
+                    unsafe { xlib::XMapWindow(state.display, main) };
+                }
+                for window in &monitor.workspaces[index].side_windows {
+                    if let Some(window) = window {
+                        unsafe { xlib::XMapWindow(state.display, *window) };
+                    }
+                }
+                if let Some(help) = monitor.workspaces[index].help_window {
+                    unsafe { xlib::XMapWindow(state.display, help) };
+                }
+                for (_, window) in &monitor.workspaces[index].key_hint_windows {
                     unsafe { xlib::XMapWindow(state.display, *window) };
                 }
-            }
-            if let Some(help) = state.monitor().workspaces[index].help_window {
-                unsafe { xlib::XMapWindow(state.display, help) };
-            }
-            for (_, window) in &state.monitor().workspaces[index].key_hint_windows {
-                unsafe { xlib::XMapWindow(state.display, *window) };
-            }
-        } else {
-            if let Some(main) = state.monitor().workspaces[index].main_window {
-                unsafe { xlib::XUnmapWindow(state.display, main) };
-            }
-            for window in &state.monitor().workspaces[index].side_windows {
-                if let Some(window) = window {
+            } else {
+                if let Some(main) = monitor.workspaces[index].main_window {
+                    unsafe { xlib::XUnmapWindow(state.display, main) };
+                }
+                for window in &monitor.workspaces[index].side_windows {
+                    if let Some(window) = window {
+                        unsafe { xlib::XUnmapWindow(state.display, *window) };
+                    }
+                }
+                if let Some(help) = monitor.workspaces[index].help_window {
+                    unsafe { xlib::XUnmapWindow(state.display, help) };
+                }
+                for (_, window) in &monitor.workspaces[index].key_hint_windows {
                     unsafe { xlib::XUnmapWindow(state.display, *window) };
                 }
-            }
-            if let Some(help) = state.monitor().workspaces[index].help_window {
-                unsafe { xlib::XUnmapWindow(state.display, help) };
-            }
-            for (_, window) in &state.monitor().workspaces[index].key_hint_windows {
-                unsafe { xlib::XUnmapWindow(state.display, *window) };
             }
         }
     }
     unsafe { xlib::XFlush(state.display) };
     crate::ewmh::update_workspace(state);
     crate::ewmh::clear_active(state);
-    if let Some(main) = state.workspace().main_window {
-        fill_main_space(state, main);
+    for i in 0..state.monitors.len() {
+        let real_monitor = state.current_monitor; // TODO: gross
+        state.current_monitor = i; // TODO: gross
+        if let Some(main) = state.workspace().main_window {
+            fill_main_space(state, main);
+        }
+        layout_side_space(state);
+        state.current_monitor = real_monitor; // TODO: gross
     }
-    layout_side_space(state);
+    crate::windows::focus_main(state);
 }
