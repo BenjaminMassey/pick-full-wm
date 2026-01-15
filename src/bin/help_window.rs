@@ -7,7 +7,7 @@ use pick_full_wm::settings;
 fn main() -> eframe::Result {
     // TODO: dynamic sizing
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([550.0, 310.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([550.0, 325.0]),
         centered: true,
         ..Default::default()
     };
@@ -70,6 +70,10 @@ impl eframe::App for HelpWindow {
             ui.label(&format!(
                 "[SUPER] + [{}]: set workspace",
                 &self.settings.bindings.workspaces.join(" / ").to_uppercase()
+            ));
+            ui.label(&format!(
+                "[SUPER] + [{}]: cycle monitor index",
+                &self.settings.bindings.monitor.to_uppercase()
             ));
             ui.label("");
             ui.label("Click anywhere in this window (or tap any key) to close.");

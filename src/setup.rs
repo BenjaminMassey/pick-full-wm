@@ -24,11 +24,12 @@ pub fn dbus_init() {
 
 pub fn mouse_input(state: &mut crate::state::State) {
     unsafe {
+        let root = xlib::XDefaultRootWindow(state.display);
         xlib::XGrabButton(
             state.display,
             1,
             0,
-            xlib::XDefaultRootWindow(state.display),
+            root,
             true as c_int,
             (xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::PointerMotionMask) as c_uint,
             xlib::GrabModeSync,
@@ -40,7 +41,7 @@ pub fn mouse_input(state: &mut crate::state::State) {
             state.display,
             3,
             0,
-            xlib::XDefaultRootWindow(state.display),
+            root,
             true as c_int,
             (xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::PointerMotionMask) as c_uint,
             xlib::GrabModeSync,
@@ -207,7 +208,7 @@ pub fn init_ewmh(state: &mut crate::state::State) {
             CString::new("_NET_NUMBER_OF_DESKTOPS").unwrap().as_ptr(),
             xlib::False,
         );
-        let num_desktops = state.workspaces.len() as u64;
+        let num_desktops = state.monitor().workspaces.len() as u64;
         xlib::XChangeProperty(
             state.display,
             root,

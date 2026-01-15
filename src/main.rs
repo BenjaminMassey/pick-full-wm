@@ -27,7 +27,7 @@ fn main() {
     loop {
         unsafe {
             xlib::XNextEvent(state.display, &mut state.event);
-
+            calc::update_current_monitor(&mut state);
             match state.event.get_type() {
                 xlib::MapRequest => {
                     println!("MapRequest event!");

@@ -42,7 +42,7 @@ pub fn update_workspace(state: &crate::state::State) {
             CString::new("_NET_CURRENT_DESKTOP").unwrap().as_ptr(),
             xlib::False
         );
-        let current_desktop = state.current_workspace as u64;
+        let current_desktop = state.monitor().current_workspace as u64;
         xlib::XChangeProperty(
             state.display,
             xlib::XDefaultRootWindow(state.display),

@@ -13,6 +13,7 @@ pub fn get_key_strings(state: &mut crate::state::State) -> Vec<String> {
     for k in &state.settings.bindings.workspaces {
         keys.push(k.clone());
     }
+    keys.push(state.settings.bindings.monitor.clone());
     keys
 }
 

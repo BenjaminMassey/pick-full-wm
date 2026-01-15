@@ -41,10 +41,10 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Keybind to open integrated help window
 - [x] Keybinding visual "hints" for side windows
 - [x] Work with Extended Window Manager Hints
+- [x] Built-in multi-monitor support
 - [ ] Wallpaper support
 - [ ] Tiling exceptions for pop-up style windows
 - [ ] Some implementation of virtual workspaces
-- [ ] Built-in multi-monitor support
 - [ ] Integration with "cargo deb"
 - [ ] Support for screenshot and capture tools
 

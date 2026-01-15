@@ -9,4 +9,4 @@ libc = "0.2.178"
 serde = { version = "1.0.228", features = ["derive"] }
 shellexpand = "3.1.1"
 toml = "0.9.10"
-x11 = { version = "2.21.0", features = ["xlib"] }
+x11 = { version = "2.21.0", features = ["xlib", "xrandr"] }

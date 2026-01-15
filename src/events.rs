@@ -152,37 +152,61 @@ pub fn key(state: &mut crate::state::State) {
         if let Some(workspace_key) = workspace_key {
             if keysym == workspace_key as u64
                 && (event.state & xlib::Mod4Mask) != 0
-                && state.current_workspace != index
+                && state.monitor().current_workspace != index
             {
-                state.current_workspace = index;
+                state.mut_monitor().current_workspace = index;
                 crate::windows::switch_workspace(state);
             }
+        }
+    }
+
+    let monitor_key = crate::keymap::parse_string(&state.settings.bindings.monitor);
+    if let Some(monitor_key) = monitor_key {
+        if keysym == monitor_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            let index = (state.current_monitor + 1) % state.monitors.len();
+            let target = &state.monitors[index];
+            unsafe {
+                xlib::XWarpPointer(
+                    state.display,
+                    0,
+                    xlib::XDefaultRootWindow(state.display),
+                    0,
+                    0,
+                    0,
+                    0,
+                    target.position.0 + (target.sizes.screen.0 as f32 * 0.5) as i32,
+                    target.position.1 + (target.sizes.screen.1 as f32 * 0.5) as i32,
+                );
+                xlib::XFlush(state.display);
+            }
+            state.current_monitor = index;
+            crate::windows::focus_main(state);
         }
     }
 }
 
 pub fn destroy(state: &mut crate::state::State) {
     let event: xlib::XDestroyWindowEvent = From::from(state.event);
-    for i in 0..state.workspaces.len() {
-        if let Some(help) = state.workspaces[i].help_window
+    for i in 0..state.monitor().workspaces.len() {
+        if let Some(help) = state.monitor().workspaces[i].help_window
             && event.window == help
         {
-            if let Some(main_window) = state.workspaces[i].main_window
-                && state.current_workspace == i
+            if let Some(main_window) = state.monitor().workspaces[i].main_window
+                && state.monitor().current_workspace == i
             {
                 crate::ewmh::set_active(state, main_window);
                 unsafe { xlib::XFlush(state.display) };
             }
-            state.workspaces[i].help_window = None;
+            state.mut_monitor().workspaces[i].help_window = None;
             return;
         }
-        let real_workspace = state.current_workspace.clone(); // TODO: gross, for windows.rs calls
-        state.current_workspace = i; // TODO: gross, for windows.rs calls
-        if let Some(main_window) = state.workspaces[i].main_window {
+        let real_workspace = state.monitor().current_workspace.clone(); // TODO: gross, for windows.rs calls
+        state.mut_monitor().current_workspace = i; // TODO: gross, for windows.rs calls
+        if let Some(main_window) = state.monitor().workspaces[i].main_window {
             if event.window == main_window {
-                if !state.workspaces[i].side_windows.is_empty() {
-                    if let Some(target) = state.workspaces[i].side_windows[0]
-                        && state.current_workspace == i
+                if !state.monitor().workspaces[i].side_windows.is_empty() {
+                    if let Some(target) = state.monitor().workspaces[i].side_windows[0]
+                        && state.monitor().current_workspace == i
                     {
                         crate::windows::remove_side_window(state, target);
                         crate::windows::fill_main_space(state, target);
@@ -194,7 +218,7 @@ pub fn destroy(state: &mut crate::state::State) {
                 crate::windows::remove_side_window(state, event.window);
             }
         }
-        state.current_workspace = real_workspace; // TODO: gross, for windows.rs calls
+        state.mut_monitor().current_workspace = real_workspace; // TODO: gross, for windows.rs calls
     }
     crate::windows::layout_side_space(state);
     if state.workspace().main_window.is_none() {
@@ -215,8 +239,8 @@ pub fn client_message(state: &mut crate::state::State) {
     };
     if event.message_type == net_current_desktop {
         let requested_workspace = event.data.get_long(0) as usize;
-        if state.current_workspace != requested_workspace {
-            state.current_workspace = requested_workspace;
+        if state.monitor().current_workspace != requested_workspace {
+            state.mut_monitor().current_workspace = requested_workspace;
             crate::windows::switch_workspace(state);
         }
     }

@@ -7,9 +7,8 @@ excluded = [ "polybar", "rofi" ]
 terminal = "alacritty"
 
 [layout]
-main_size = "80%x96%"
-#main_size = "1800x1080"
-top_left = "0,4%"
+main_size = [ "80%x96%", "80%x100%" ] # define per monitor
+top_left = [ "0,4%", "0,0" ] # define per monitor
 conditional_full = true # fill side if none
 
 [bindings]
@@ -21,3 +20,4 @@ help = "h"
 key_hints = true
 terminal = "t"
 workspaces = [ "1", "2", "3", "4" ] # also defines how many
+monitor = "tab" # cycle monitor index

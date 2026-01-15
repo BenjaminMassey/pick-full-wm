@@ -5,18 +5,18 @@ use x11::xlib;
 pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
     let width =
         if state.settings.layout.conditional_full && state.workspace().side_windows.is_empty() {
-            state.sizes.screen.0
+            state.monitor().sizes.screen.0
         } else {
-            state.sizes.main.0
+            state.monitor().sizes.main.0
         };
     unsafe {
         xlib::XMoveResizeWindow(
             state.display,
             window,
-            state.position.0,
-            state.position.1,
+            state.monitor().position.0,
+            state.monitor().position.1,
             width as c_uint,
-            state.sizes.main.1 as c_uint,
+            state.monitor().sizes.main.1 as c_uint,
         );
     }
     state.mut_workspace().main_window = Some(window);
@@ -43,21 +43,22 @@ pub fn remove_side_window(state: &mut crate::state::State, window: xlib::Window)
 
 pub fn layout_side_space(state: &mut crate::state::State) {
     let mut positions: Vec<(c_int, c_int)> = vec![];
-    let section_size = state.sizes.side.1 as f32 / state.workspace().side_windows.len() as f32;
+    let section_size =
+        state.monitor().sizes.side.1 as f32 / state.workspace().side_windows.len() as f32;
     for (index, window) in state.workspace().side_windows.iter().enumerate() {
         if let Some(window) = window {
             let section_pos = section_size * index as f32;
             println!(
                 "layout_side_space {} {},{} {}x{}",
                 window,
-                state.sizes.main.0 as c_int,
+                state.monitor().sizes.main.0 as c_int,
                 section_pos as c_int, // TODO: investigate cast
-                state.sizes.side.0 as c_uint,
+                state.monitor().sizes.side.0 as c_uint,
                 section_size as c_uint, // TODO: investigate cast
             );
             let position = (
-                (state.position.0 + state.sizes.main.0 as i32) as c_int,
-                (state.position.1 + section_pos as i32) as c_int, // TODO: investigate cast
+                (state.monitor().position.0 + state.monitor().sizes.main.0 as i32) as c_int,
+                (state.monitor().position.1 + section_pos as i32) as c_int, // TODO: investigate cast
             );
             positions.push(position);
             unsafe {
@@ -66,8 +67,8 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                     *window,
                     position.0,
                     position.1,
-                    (state.sizes.side.0 as i32 - state.position.0) as c_uint,
-                    section_size as c_uint, // TODO: investigate cast
+                    state.monitor().sizes.side.0 as c_uint, // TODO: take into account x offset
+                    section_size as c_uint,                 // TODO: investigate cast
                 );
             }
         }
@@ -115,10 +116,13 @@ pub fn fullscreen(state: &mut crate::state::State, window: xlib::Window) {
         xlib::XMoveResizeWindow(
             state.display,
             window,
-            0,
-            0,
-            state.sizes.screen.0 as c_uint,
-            state.sizes.screen.1 as c_uint,
+            state.monitor().position.0
+                + ((state.monitor().sizes.main.0 + state.monitor().sizes.side.0)
+                    - state.monitor().sizes.screen.0),
+            state.monitor().position.1
+                + (state.monitor().sizes.main.1 - state.monitor().sizes.screen.1),
+            state.monitor().sizes.screen.0 as c_uint,
+            state.monitor().sizes.screen.1 as c_uint,
         );
     }
     focus_main(state);
@@ -187,7 +191,7 @@ pub fn run_command(command: &str) {
     };
 }
 
-fn focus_main(state: &mut crate::state::State) {
+pub fn focus_main(state: &mut crate::state::State) {
     if let Some(window) = state.workspace().main_window
         && crate::safety::window_exists(state, window)
     {
@@ -196,35 +200,35 @@ fn focus_main(state: &mut crate::state::State) {
 }
 
 pub fn switch_workspace(state: &mut crate::state::State) {
-    for index in 0..state.workspaces.len() {
-        if index == state.current_workspace {
-            if let Some(main) = state.workspaces[index].main_window {
+    for index in 0..state.monitor().workspaces.len() {
+        if index == state.monitor().current_workspace {
+            if let Some(main) = state.monitor().workspaces[index].main_window {
                 unsafe { xlib::XMapWindow(state.display, main) };
             }
-            for window in &state.workspaces[index].side_windows {
+            for window in &state.monitor().workspaces[index].side_windows {
                 if let Some(window) = window {
                     unsafe { xlib::XMapWindow(state.display, *window) };
                 }
             }
-            if let Some(help) = state.workspaces[index].help_window {
+            if let Some(help) = state.monitor().workspaces[index].help_window {
                 unsafe { xlib::XMapWindow(state.display, help) };
             }
-            for (_, window) in &state.workspaces[index].key_hint_windows {
+            for (_, window) in &state.monitor().workspaces[index].key_hint_windows {
                 unsafe { xlib::XMapWindow(state.display, *window) };
             }
         } else {
-            if let Some(main) = state.workspaces[index].main_window {
+            if let Some(main) = state.monitor().workspaces[index].main_window {
                 unsafe { xlib::XUnmapWindow(state.display, main) };
             }
-            for window in &state.workspaces[index].side_windows {
+            for window in &state.monitor().workspaces[index].side_windows {
                 if let Some(window) = window {
                     unsafe { xlib::XUnmapWindow(state.display, *window) };
                 }
             }
-            if let Some(help) = state.workspaces[index].help_window {
+            if let Some(help) = state.monitor().workspaces[index].help_window {
                 unsafe { xlib::XUnmapWindow(state.display, help) };
             }
-            for (_, window) in &state.workspaces[index].key_hint_windows {
+            for (_, window) in &state.monitor().workspaces[index].key_hint_windows {
                 unsafe { xlib::XUnmapWindow(state.display, *window) };
             }
         }

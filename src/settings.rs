@@ -8,8 +8,8 @@ pub struct Applications {
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Layout {
-    pub main_size: String,
-    pub top_left: String,
+    pub main_size: Vec<String>,
+    pub top_left: Vec<String>,
     pub conditional_full: bool,
 }
 
@@ -23,6 +23,7 @@ pub struct Bindings {
     pub key_hints: bool,
     pub terminal: String,
     pub workspaces: Vec<String>,
+    pub monitor: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -41,8 +42,8 @@ impl Settings {
                 terminal: "alacritty".to_owned(),
             },
             layout: Layout {
-                main_size: "80%x96%".to_owned(),
-                top_left: "0,4%".to_owned(),
+                main_size: vec!["80%x96%".to_owned(), "80%x100%".to_owned()],
+                top_left: vec!["0,4%".to_owned(), "0,0".to_owned()],
                 conditional_full: true,
             },
             bindings: Bindings {
@@ -68,6 +69,7 @@ impl Settings {
                     "3".to_owned(),
                     "4".to_owned(),
                 ],
+                monitor: "tab".to_owned(),
             },
         }
     }
