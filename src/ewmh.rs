@@ -1,34 +1,35 @@
-use std::ffi::CString;
-use x11::xlib;
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{
+    AtomEnum, ConfigureWindowAux, ConnectionExt, InputFocus, PropMode, StackMode, Window,
+};
+use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
+use x11rb::CURRENT_TIME;
 
-pub fn set_active(state: &mut crate::state::State, window: xlib::Window) {
-    unsafe {
-        let net_active_window = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_ACTIVE_WINDOW").unwrap().as_ptr(),
-            xlib::False,
-        );
-        xlib::XChangeProperty(
-            state.display,
-            xlib::XDefaultRootWindow(state.display),
-            net_active_window,
-            xlib::XA_WINDOW,
-            32,
-            xlib::PropModeReplace,
-            &window as *const xlib::Window as *const u8,
-            1,
-        );
-        if crate::safety::window_exists(state, window) {
-            xlib::XSetInputFocus(
-                state.display,
-                window,
-                xlib::RevertToPointerRoot,
-                xlib::CurrentTime,
-            );
-            xlib::XRaiseWindow(state.display, window);
-        }
-        xlib::XFlush(state.display);
+pub fn set_active(state: &mut crate::state::State, window: Window) {
+    state
+        .conn
+        .change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_ACTIVE_WINDOW,
+            AtomEnum::WINDOW,
+            &[window],
+        )
+        .expect("Failed to set _NET_ACTIVE_WINDOW");
+
+    if crate::safety::window_exists(state, window) {
+        state
+            .conn
+            .set_input_focus(InputFocus::POINTER_ROOT, window, CURRENT_TIME)
+            .expect("Failed to set input focus");
+
+        state
+            .conn
+            .configure_window(window, &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE))
+            .expect("Failed to raise window");
     }
+
+    state.conn.flush().expect("Failed to flush");
 }
 
 pub fn clear_active(state: &mut crate::state::State) {
@@ -36,23 +37,16 @@ pub fn clear_active(state: &mut crate::state::State) {
 }
 
 pub fn update_workspace(state: &crate::state::State) {
-    unsafe {
-        let net_current_desktop = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_CURRENT_DESKTOP").unwrap().as_ptr(),
-            xlib::False,
-        );
-        let current_desktop = state.current_workspace as u64;
-        xlib::XChangeProperty(
-            state.display,
-            xlib::XDefaultRootWindow(state.display),
-            net_current_desktop,
-            xlib::XA_CARDINAL,
-            32,
-            xlib::PropModeReplace,
-            &current_desktop as *const u64 as *const u8,
-            1,
-        );
-        xlib::XFlush(state.display);
-    }
+    state
+        .conn
+        .change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_CURRENT_DESKTOP,
+            AtomEnum::CARDINAL,
+            &[state.current_workspace as u32],
+        )
+        .expect("Failed to set _NET_CURRENT_DESKTOP");
+
+    state.conn.flush().expect("Failed to flush");
 }

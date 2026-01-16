@@ -1,6 +1,11 @@
-use libc::{c_int, c_uint};
-use std::ffi::CString;
-use x11::xlib;
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{
+    AtomEnum, ButtonIndex, ChangeWindowAttributesAux, ConnectionExt, CreateWindowAux, EventMask,
+    GrabMode, ModMask, PropMode, WindowClass,
+};
+use x11rb::rust_connection::RustConnection;
+use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
+use x11rb::CURRENT_TIME;
 
 pub fn run_startups(state: &mut crate::state::State) {
     for startup in &state.settings.applications.startups {
@@ -15,250 +20,268 @@ pub fn dbus_init() {
         .is_ok()
         && std::env::var("DBUS_SESSION_BUS_ADDRESS").is_err()
     {
-        std::process::Command::new("dbus-launch")
+        match std::process::Command::new("dbus-launch")
             .arg("--exit-with-session")
             .spawn()
-            .ok();
+        {
+            Ok(_) => println!("Successfully launched dbus-launch"),
+            Err(e) => eprintln!("Warning: Failed to launch dbus-launch: {}", e),
+        }
     }
-} // helps with startup for certain apps like KDE ones
+}
 
 pub fn mouse_input(state: &mut crate::state::State) {
-    unsafe {
-        let root = xlib::XDefaultRootWindow(state.display);
-        xlib::XGrabButton(
-            state.display,
-            1,
-            0,
-            root,
-            true as c_int,
-            (xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::PointerMotionMask) as c_uint,
-            xlib::GrabModeSync,
-            xlib::GrabModeSync,
-            0,
-            0,
-        ); // left mouse button
-        xlib::XGrabButton(
-            state.display,
-            3,
-            0,
-            root,
-            true as c_int,
-            (xlib::ButtonPressMask | xlib::ButtonReleaseMask | xlib::PointerMotionMask) as c_uint,
-            xlib::GrabModeSync,
-            xlib::GrabModeSync,
-            0,
-            0,
-        ); // right mouse button
-    };
+    let event_mask = EventMask::BUTTON_PRESS | EventMask::BUTTON_RELEASE | EventMask::POINTER_MOTION;
+
+    // Left mouse button
+    state
+        .conn
+        .grab_button(
+            true,
+            state.root,
+            event_mask,
+            GrabMode::SYNC,
+            GrabMode::SYNC,
+            0u32,
+            0u32,
+            ButtonIndex::M1,
+            ModMask::ANY,
+        )
+        .expect("Failed to grab button 1");
+
+    // Right mouse button
+    state
+        .conn
+        .grab_button(
+            true,
+            state.root,
+            event_mask,
+            GrabMode::SYNC,
+            GrabMode::SYNC,
+            0u32,
+            0u32,
+            ButtonIndex::M3,
+            ModMask::ANY,
+        )
+        .expect("Failed to grab button 3");
 }
 
 pub fn key_input(state: &mut crate::state::State) {
     std::thread::sleep(std::time::Duration::from_millis(500));
-    // allows time for login manager to ungrab properly
+
     for k in crate::keymap::get_key_strings(state) {
-        let key = crate::keymap::parse_string(&k);
-        if let Some(key) = key {
-            unsafe {
-                xlib::XGrabKey(
-                    state.display,
-                    xlib::XKeysymToKeycode(state.display, key as u64) as i32,
-                    xlib::Mod4Mask, // super key
-                    xlib::XDefaultRootWindow(state.display),
-                    xlib::True,
-                    xlib::GrabModeAsync,
-                    xlib::GrabModeAsync,
-                )
-            };
+        let keysym = crate::keymap::parse_string(&k);
+        if let Some(keysym) = keysym {
+            if let Some(keycode) = keysym_to_keycode(&state.conn, state.root, keysym) {
+                state
+                    .conn
+                    .grab_key(
+                        true,
+                        state.root,
+                        ModMask::M4,
+                        keycode,
+                        GrabMode::ASYNC,
+                        GrabMode::ASYNC,
+                    )
+                    .expect("Failed to grab key");
+            }
         } else {
             eprintln!("unknown key in settings: {}", k);
         }
     }
 }
 
-pub fn windows(state: &mut crate::state::State) {
-    unsafe {
-        let root = xlib::XDefaultRootWindow(state.display);
-        xlib::XSelectInput(
-            state.display,
-            root,
-            xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask,
-        );
-        xlib::XSync(state.display, 0 /* False */);
-    };
+fn keysym_to_keycode(conn: &RustConnection, _root: u32, keysym: u32) -> Option<u8> {
+    let setup = conn.setup();
+    let min_keycode = setup.min_keycode;
+    let max_keycode = setup.max_keycode;
+
+    let mapping = conn
+        .get_keyboard_mapping(min_keycode, max_keycode - min_keycode + 1)
+        .ok()?
+        .reply()
+        .ok()?;
+
+    let keysyms_per_keycode = mapping.keysyms_per_keycode as usize;
+    for i in 0..=(max_keycode - min_keycode) as usize {
+        for j in 0..keysyms_per_keycode {
+            let idx = i * keysyms_per_keycode + j;
+            if idx < mapping.keysyms.len() && mapping.keysyms[idx] == keysym {
+                return Some((min_keycode as usize + i) as u8);
+            }
+        }
+    }
+    None
 }
 
-pub fn display(arg0: i8) -> *mut xlib::Display {
-    unsafe {
-        let display = xlib::XOpenDisplay(&arg0);
-        let root = xlib::XDefaultRootWindow(display);
-        let screen = xlib::XDefaultScreen(display);
+pub fn windows(state: &mut crate::state::State) {
+    state
+        .conn
+        .change_window_attributes(
+            state.root,
+            &ChangeWindowAttributesAux::new()
+                .event_mask(EventMask::SUBSTRUCTURE_REDIRECT | EventMask::SUBSTRUCTURE_NOTIFY),
+        )
+        .expect("Failed to select input on root");
 
-        xlib::XUngrabKeyboard(display, xlib::CurrentTime);
-        xlib::XUngrabPointer(display, xlib::CurrentTime);
-        xlib::XUngrabServer(display);
-        xlib::XUngrabKey(display, xlib::AnyKey, xlib::AnyModifier as u32, root);
+    state.conn.sync().expect("Failed to sync");
+}
 
-        xlib::XSetWindowBackground(display, root, xlib::XBlackPixel(display, screen));
+pub fn connect() -> (RustConnection, usize) {
+    let (conn, screen_num) = x11rb::connect(None).expect("Failed to connect to X server");
 
-        xlib::XClearWindow(display, root);
+    let screen = &conn.setup().roots[screen_num];
+    let root = screen.root;
 
-        xlib::XSync(display, xlib::False);
+    conn.ungrab_keyboard(CURRENT_TIME)
+        .expect("Failed to ungrab keyboard");
+    conn.ungrab_pointer(CURRENT_TIME)
+        .expect("Failed to ungrab pointer");
+    conn.ungrab_server().expect("Failed to ungrab server");
+    conn.ungrab_key(0u8, root, ModMask::ANY)
+        .expect("Failed to ungrab keys");
 
-        display
-    }
+    let black_pixel = screen.black_pixel;
+    conn.change_window_attributes(
+        root,
+        &ChangeWindowAttributesAux::new().background_pixel(black_pixel),
+    )
+    .expect("Failed to set background");
+
+    conn.clear_area(false, root, 0i16, 0i16, 0u16, 0u16)
+        .expect("Failed to clear window");
+
+    conn.sync().expect("Failed to sync");
+
+    (conn, screen_num)
 }
 
 pub fn init_ewmh(state: &mut crate::state::State) {
-    unsafe {
-        let root = xlib::XDefaultRootWindow(state.display);
-
-        // Create a dummy window for EWMH compliance check
-        let check_window = xlib::XCreateSimpleWindow(state.display, root, 0, 0, 1, 1, 0, 0, 0);
-
-        // Declare which EWMH atoms we support
-        let supported_atoms = [
-            "_NET_ACTIVE_WINDOW",
-            "_NET_WM_NAME",
-            "_NET_CLIENT_LIST",
-            "_NET_SUPPORTING_WM_CHECK",
-            "_NET_NUMBER_OF_DESKTOPS",
-            "_NET_CURRENT_DESKTOP",
-            "_NET_DESKTOP_NAMES",
-        ];
-
-        let mut atom_values: Vec<xlib::Atom> = Vec::new();
-        for atom_name in &supported_atoms {
-            let atom = xlib::XInternAtom(
-                state.display,
-                CString::new(*atom_name).unwrap().as_ptr(),
-                xlib::False,
-            );
-            atom_values.push(atom);
-        }
-
-        // Set _NET_SUPPORTED on root window
-        let net_supported = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_SUPPORTED").unwrap().as_ptr(),
-            xlib::False,
-        );
-        xlib::XChangeProperty(
-            state.display,
-            root,
-            net_supported,
-            xlib::XA_ATOM,
-            32,
-            xlib::PropModeReplace,
-            atom_values.as_ptr() as *const u8,
-            atom_values.len() as i32,
-        );
-
-        // Set _NET_SUPPORTING_WM_CHECK on root and check window
-        let net_supporting_wm_check = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_SUPPORTING_WM_CHECK").unwrap().as_ptr(),
-            xlib::False,
-        );
-        xlib::XChangeProperty(
-            state.display,
-            root,
-            net_supporting_wm_check,
-            xlib::XA_WINDOW,
-            32,
-            xlib::PropModeReplace,
-            &check_window as *const xlib::Window as *const u8,
-            1,
-        );
-        xlib::XChangeProperty(
-            state.display,
+    // Create a dummy window for EWMH compliance check
+    let check_window = state.conn.generate_id().expect("Failed to generate window id");
+    state
+        .conn
+        .create_window(
+            0,
             check_window,
-            net_supporting_wm_check,
-            xlib::XA_WINDOW,
-            32,
-            xlib::PropModeReplace,
-            &check_window as *const xlib::Window as *const u8,
+            state.root,
+            0,
+            0,
             1,
-        );
+            1,
+            0,
+            WindowClass::INPUT_OUTPUT,
+            0,
+            &CreateWindowAux::new(),
+        )
+        .expect("Failed to create check window");
 
-        // Set WM name on check window
-        let net_wm_name = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_WM_NAME").unwrap().as_ptr(),
-            xlib::False,
-        );
-        let utf8_string = xlib::XInternAtom(
-            state.display,
-            CString::new("UTF8_STRING").unwrap().as_ptr(),
-            xlib::False,
-        );
-        let wm_name = CString::new("Pick-Full-WM").unwrap();
-        xlib::XChangeProperty(
-            state.display,
+    // Set _NET_SUPPORTED on root window
+    let supported_atoms = [
+        state.atoms._NET_ACTIVE_WINDOW,
+        state.atoms._NET_WM_NAME,
+        state.atoms._NET_CLIENT_LIST,
+        state.atoms._NET_SUPPORTING_WM_CHECK,
+        state.atoms._NET_NUMBER_OF_DESKTOPS,
+        state.atoms._NET_CURRENT_DESKTOP,
+        state.atoms._NET_DESKTOP_NAMES,
+    ];
+
+    state
+        .conn
+        .change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_SUPPORTED,
+            AtomEnum::ATOM,
+            &supported_atoms,
+        )
+        .expect("Failed to set _NET_SUPPORTED");
+
+    // Set _NET_SUPPORTING_WM_CHECK on root and check window
+    state
+        .conn
+        .change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_SUPPORTING_WM_CHECK,
+            AtomEnum::WINDOW,
+            &[check_window],
+        )
+        .expect("Failed to set _NET_SUPPORTING_WM_CHECK on root");
+
+    state
+        .conn
+        .change_property32(
+            PropMode::REPLACE,
             check_window,
-            net_wm_name,
-            utf8_string,
-            8,
-            xlib::PropModeReplace,
-            wm_name.as_ptr() as *const u8,
-            wm_name.as_bytes().len() as i32,
-        );
+            state.atoms._NET_SUPPORTING_WM_CHECK,
+            AtomEnum::WINDOW,
+            &[check_window],
+        )
+        .expect("Failed to set _NET_SUPPORTING_WM_CHECK on check window");
 
-        let net_number_of_desktops = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_NUMBER_OF_DESKTOPS").unwrap().as_ptr(),
-            xlib::False,
-        );
-        let num_desktops = state.monitor().workspaces.len() as u64;
-        xlib::XChangeProperty(
-            state.display,
-            root,
-            net_number_of_desktops,
-            xlib::XA_CARDINAL,
-            32,
-            xlib::PropModeReplace,
-            &num_desktops as *const u64 as *const u8,
-            1,
-        );
+    // Set WM name on check window
+    let wm_name = b"Pick-Full-WM";
+    state
+        .conn
+        .change_property8(
+            PropMode::REPLACE,
+            check_window,
+            state.atoms._NET_WM_NAME,
+            state.atoms.UTF8_STRING,
+            wm_name,
+        )
+        .expect("Failed to set _NET_WM_NAME");
 
-        let net_current_desktop = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_CURRENT_DESKTOP").unwrap().as_ptr(),
-            xlib::False,
-        );
-        let current_desktop = 0 as u64;
-        xlib::XChangeProperty(
-            state.display,
-            root,
-            net_current_desktop,
-            xlib::XA_CARDINAL,
-            32,
-            xlib::PropModeReplace,
-            &current_desktop as *const u64 as *const u8,
-            1,
-        );
+    // Set number of desktops
+    let num_desktops = state.monitor().workspaces.len() as u32;
+    state
+        .conn
+        .change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_NUMBER_OF_DESKTOPS,
+            AtomEnum::CARDINAL,
+            &[num_desktops],
+        )
+        .expect("Failed to set _NET_NUMBER_OF_DESKTOPS");
 
-        let net_desktop_names = xlib::XInternAtom(
-            state.display,
-            CString::new("_NET_DESKTOP_NAMES").unwrap().as_ptr(),
-            xlib::False,
-        );
-        let utf8_string = xlib::XInternAtom(
-            state.display,
-            CString::new("UTF8_STRING").unwrap().as_ptr(),
-            xlib::False,
-        );
-        let names = state.settings.bindings.workspaces.clone().join("\0") + "\0";
-        xlib::XChangeProperty(
-            state.display,
-            root,
-            net_desktop_names,
-            utf8_string,
-            8,
-            xlib::PropModeReplace,
-            names.as_ptr(),
-            names.len() as i32,
-        );
+    // Set current desktop
+    state
+        .conn
+        .change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_CURRENT_DESKTOP,
+            AtomEnum::CARDINAL,
+            &[0u32],
+        )
+        .expect("Failed to set _NET_CURRENT_DESKTOP");
 
-        xlib::XSync(state.display, xlib::False);
-    }
+    // Set desktop names
+    let names: Vec<u8> = state
+        .settings
+        .bindings
+        .workspaces
+        .iter()
+        .flat_map(|s| {
+            let mut bytes = s.as_bytes().to_vec();
+            bytes.push(0);
+            bytes
+        })
+        .collect();
+
+    state
+        .conn
+        .change_property8(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_DESKTOP_NAMES,
+            state.atoms.UTF8_STRING,
+            &names,
+        )
+        .expect("Failed to set _NET_DESKTOP_NAMES");
+
+    state.conn.sync().expect("Failed to sync");
 }
