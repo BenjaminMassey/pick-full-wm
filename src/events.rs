@@ -1,12 +1,20 @@
-use x11::xlib;
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{
+    Allow, ButtonPressEvent, ClientMessageEvent, ConnectionExt, DestroyNotifyEvent,
+    KeyButMask, KeyReleaseEvent, MapRequestEvent,
+};
+use x11rb::CURRENT_TIME;
 
-pub fn map_request(state: &mut crate::state::State) {
-    let event: xlib::XMapRequestEvent = From::from(state.event);
+pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if !crate::safety::window_exists(state, event.window) {
-        unsafe { xlib::XAllowEvents(state.display, xlib::AsyncBoth, xlib::CurrentTime) };
+        state
+            .conn
+            .allow_events(Allow::ASYNC_BOTH, CURRENT_TIME)
+            .expect("Failed to allow events");
+        state.conn.flush().expect("Failed to flush");
         return;
     }
-    unsafe { xlib::XMapWindow(state.display, event.window) };
+    state.conn.map_window(event.window).expect("Failed to map window");
     if let Some(key) = crate::windows::get_key_hint_window(state, event.window) {
         if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
             *entry = event.window;
@@ -21,7 +29,7 @@ pub fn map_request(state: &mut crate::state::State) {
     }
     if crate::windows::is_help_window(state, event.window) {
         crate::ewmh::set_active(state, event.window);
-        unsafe { xlib::XFlush(state.display) };
+        state.conn.flush().expect("Failed to flush");
         state.mut_workspace().help_window = Some(event.window);
         return;
     }
@@ -35,49 +43,66 @@ pub fn map_request(state: &mut crate::state::State) {
     }
 }
 
-pub fn button(state: &mut crate::state::State) {
-    let event: xlib::XButtonEvent = From::from(state.event);
-    if !crate::safety::window_exists(state, event.window)
-        || crate::windows::is_excepted_window(state, event.subwindow)
+pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
+    if !crate::safety::window_exists(state, event.event)
+        || crate::windows::is_excepted_window(state, event.child)
     {
-        unsafe { xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime) };
+        state
+            .conn
+            .allow_events(Allow::REPLAY_POINTER, CURRENT_TIME)
+            .expect("Failed to allow events");
+        state.conn.flush().expect("Failed to flush");
         return;
     }
-    if event.button == 1 {
+    if event.detail == 1 {
         // left click
         if let Some(existing) = state.workspace().main_window {
-            if existing == event.subwindow {
-                unsafe {
-                    xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime)
-                };
+            if existing == event.child {
+                state
+                    .conn
+                    .allow_events(Allow::REPLAY_POINTER, CURRENT_TIME)
+                    .expect("Failed to allow events");
+                state.conn.flush().expect("Failed to flush");
                 return;
             }
-            crate::windows::remove_side_window(state, event.subwindow);
-            crate::windows::fill_main_space(state, event.subwindow);
+            crate::windows::remove_side_window(state, event.child);
+            crate::windows::fill_main_space(state, event.child);
             crate::windows::send_side_space(state, existing);
-            unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
+            state
+                .conn
+                .allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
+                .expect("Failed to allow events");
+            state.conn.flush().expect("Failed to flush");
         }
-    } else if event.button == 3 {
+    } else if event.detail == 3 {
         // right click
         if let Some(existing) = state.workspace().main_window
-            && existing == event.subwindow
+            && existing == event.child
         {
-            unsafe { xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime) };
+            state
+                .conn
+                .allow_events(Allow::REPLAY_POINTER, CURRENT_TIME)
+                .expect("Failed to allow events");
+            state.conn.flush().expect("Failed to flush");
             return;
         }
-        unsafe { xlib::XDestroyWindow(state.display, event.subwindow) };
+        state.conn.destroy_window(event.child).expect("Failed to destroy window");
         crate::windows::layout_side_space(state);
-        unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
+        state
+            .conn
+            .allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
+            .expect("Failed to allow events");
+        state.conn.flush().expect("Failed to flush");
     }
 }
 
-pub fn key(state: &mut crate::state::State) {
-    let event: xlib::XKeyReleasedEvent = From::from(state.event);
-    let keysym = unsafe { xlib::XKeycodeToKeysym(state.display, event.keycode as u8, 0) };
+pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
+    let keysym = keycode_to_keysym(state, event.detail);
+    let mod4_pressed = event.state.contains(KeyButMask::MOD4);
 
     let launcher_key = crate::keymap::parse_string(&state.settings.bindings.launcher);
     if let Some(launcher_key) = launcher_key {
-        if keysym == launcher_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+        if keysym == Some(launcher_key) && mod4_pressed {
             crate::windows::run_command(&state.settings.applications.launcher);
         }
     }
@@ -88,7 +113,7 @@ pub fn key(state: &mut crate::state::State) {
         }
         let swap_key = crate::keymap::parse_string(key);
         if let Some(swap_key) = swap_key {
-            if keysym == swap_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+            if keysym == Some(swap_key) && mod4_pressed {
                 let target = state.workspace().side_windows[index];
                 if let Some(target) = target {
                     let existing = state.workspace().main_window.clone();
@@ -104,17 +129,21 @@ pub fn key(state: &mut crate::state::State) {
 
     let close_key = crate::keymap::parse_string(&state.settings.bindings.close_main);
     if let Some(close_key) = close_key {
-        if keysym == close_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+        if keysym == Some(close_key) && mod4_pressed {
             if let Some(main) = state.workspace().main_window {
-                unsafe { xlib::XDestroyWindow(state.display, main) };
-                unsafe { xlib::XAllowEvents(state.display, xlib::AsyncPointer, xlib::CurrentTime) };
+                state.conn.destroy_window(main).expect("Failed to destroy window");
+                state
+                    .conn
+                    .allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
+                    .expect("Failed to allow events");
+                state.conn.flush().expect("Failed to flush");
             }
         }
     }
 
     let full_key = crate::keymap::parse_string(&state.settings.bindings.fullscreen);
     if let Some(full_key) = full_key {
-        if keysym == full_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+        if keysym == Some(full_key) && mod4_pressed {
             if let Some(main) = state.workspace().main_window {
                 state.mut_workspace().fullscreen = !state.workspace().fullscreen;
                 if state.workspace().fullscreen {
@@ -128,14 +157,14 @@ pub fn key(state: &mut crate::state::State) {
 
     let help_key = crate::keymap::parse_string(&state.settings.bindings.help);
     if let Some(help_key) = help_key {
-        if keysym == help_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+        if keysym == Some(help_key) && mod4_pressed {
             crate::binaries::help_window();
         }
     }
 
     let term_key = crate::keymap::parse_string(&state.settings.bindings.terminal);
     if let Some(term_key) = term_key {
-        if keysym == term_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+        if keysym == Some(term_key) && mod4_pressed {
             crate::windows::run_command(&state.settings.applications.terminal);
         }
     }
@@ -150,10 +179,7 @@ pub fn key(state: &mut crate::state::State) {
     {
         let workspace_key = crate::keymap::parse_string(key);
         if let Some(workspace_key) = workspace_key {
-            if keysym == workspace_key as u64
-                && (event.state & xlib::Mod4Mask) != 0
-                && state.current_workspace != index
-            {
+            if keysym == Some(workspace_key) && mod4_pressed && state.current_workspace != index {
                 state.current_workspace = index;
                 crate::windows::switch_workspace(state);
             }
@@ -162,31 +188,35 @@ pub fn key(state: &mut crate::state::State) {
 
     let monitor_key = crate::keymap::parse_string(&state.settings.bindings.monitor);
     if let Some(monitor_key) = monitor_key {
-        if keysym == monitor_key as u64 && (event.state & xlib::Mod4Mask) != 0 {
+        if keysym == Some(monitor_key) && mod4_pressed {
             let index = (state.current_monitor + 1) % state.monitors.len();
             let target = &state.monitors[index];
-            unsafe {
-                xlib::XWarpPointer(
-                    state.display,
+
+            // Calculate center position, clamping to i16 range to prevent overflow
+            let x = (target.position.0 + (target.sizes.screen.0 as f32 * 0.5) as i32).clamp(-32768, 32767) as i16;
+            let y = (target.position.1 + (target.sizes.screen.1 as f32 * 0.5) as i32).clamp(-32768, 32767) as i16;
+
+            state
+                .conn
+                .warp_pointer(
+                    0u32,
+                    state.root,
                     0,
-                    xlib::XDefaultRootWindow(state.display),
                     0,
                     0,
                     0,
-                    0,
-                    target.position.0 + (target.sizes.screen.0 as f32 * 0.5) as i32,
-                    target.position.1 + (target.sizes.screen.1 as f32 * 0.5) as i32,
-                );
-                xlib::XFlush(state.display);
-            }
+                    x,
+                    y,
+                )
+                .expect("Failed to warp pointer");
+            state.conn.flush().expect("Failed to flush");
             state.current_monitor = index;
             crate::windows::focus_main(state);
         }
     }
 }
 
-pub fn destroy(state: &mut crate::state::State) {
-    let event: xlib::XDestroyWindowEvent = From::from(state.event);
+pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
     for i in 0..state.monitor().workspaces.len() {
         if let Some(help) = state.monitor().workspaces[i].help_window
             && event.window == help
@@ -195,7 +225,7 @@ pub fn destroy(state: &mut crate::state::State) {
                 && state.current_workspace == i
             {
                 crate::ewmh::set_active(state, main_window);
-                unsafe { xlib::XFlush(state.display) };
+                state.conn.flush().expect("Failed to flush");
             }
             state.mut_monitor().workspaces[i].help_window = None;
             return;
@@ -226,22 +256,36 @@ pub fn destroy(state: &mut crate::state::State) {
     }
 }
 
-pub fn client_message(state: &mut crate::state::State) {
-    let event: xlib::XClientMessageEvent = From::from(state.event);
-    let net_current_desktop = unsafe {
-        xlib::XInternAtom(
-            state.display,
-            std::ffi::CString::new("_NET_CURRENT_DESKTOP")
-                .unwrap()
-                .as_ptr(),
-            xlib::False,
-        )
-    };
-    if event.message_type == net_current_desktop {
-        let requested_workspace = event.data.get_long(0) as usize;
+pub fn client_message(state: &mut crate::state::State, event: ClientMessageEvent) {
+    if event.type_ == state.atoms._NET_CURRENT_DESKTOP {
+        let requested_workspace = event.data.as_data32()[0] as usize;
         if state.current_workspace != requested_workspace {
             state.current_workspace = requested_workspace;
             crate::windows::switch_workspace(state);
         }
     }
+}
+
+fn keycode_to_keysym(state: &crate::state::State, keycode: u8) -> Option<u32> {
+    let setup = state.conn.setup();
+    let min_keycode = setup.min_keycode;
+    let max_keycode = setup.max_keycode;
+
+    let mapping = state
+        .conn
+        .get_keyboard_mapping(min_keycode, max_keycode - min_keycode + 1)
+        .ok()?
+        .reply()
+        .ok()?;
+
+    let keysyms_per_keycode = mapping.keysyms_per_keycode as usize;
+    let index = (keycode - min_keycode) as usize;
+
+    if index * keysyms_per_keycode < mapping.keysyms.len() {
+        let keysym = mapping.keysyms[index * keysyms_per_keycode];
+        if keysym != 0 {
+            return Some(keysym);
+        }
+    }
+    None
 }

@@ -1,8 +1,7 @@
-extern crate libc;
-extern crate x11;
+use x11rb::connection::Connection;
+use x11rb::protocol::Event;
 
-use x11::xlib;
-
+mod atoms;
 mod binaries;
 mod calc;
 mod events;
@@ -15,7 +14,6 @@ mod state;
 mod windows;
 
 fn main() {
-    safety::setup_error_handler();
     setup::dbus_init();
     let mut state = state::State::init();
     setup::init_ewmh(&mut state);
@@ -25,32 +23,30 @@ fn main() {
     setup::windows(&mut state);
 
     loop {
-        unsafe {
-            xlib::XNextEvent(state.display, &mut state.event);
-            calc::update_current_monitor(&mut state);
-            match state.event.get_type() {
-                xlib::MapRequest => {
-                    println!("MapRequest event!");
-                    events::map_request(&mut state);
-                }
-                xlib::ButtonPress => {
-                    println!("ButtonPress event!");
-                    events::button(&mut state);
-                }
-                xlib::KeyRelease => {
-                    println!("KeyRelease event!");
-                    events::key(&mut state);
-                }
-                xlib::DestroyNotify => {
-                    println!("DestroyNotify event!");
-                    events::destroy(&mut state);
-                }
-                xlib::ClientMessage => {
-                    println!("ClientMessage event!");
-                    events::client_message(&mut state);
-                }
-                _ => {}
-            };
+        let event = state.conn.wait_for_event().expect("Failed to wait for event");
+        calc::update_current_monitor(&mut state);
+        match event {
+            Event::MapRequest(e) => {
+                println!("MapRequest event!");
+                events::map_request(&mut state, e);
+            }
+            Event::ButtonPress(e) => {
+                println!("ButtonPress event!");
+                events::button(&mut state, e);
+            }
+            Event::KeyRelease(e) => {
+                println!("KeyRelease event!");
+                events::key(&mut state, e);
+            }
+            Event::DestroyNotify(e) => {
+                println!("DestroyNotify event!");
+                events::destroy(&mut state, e);
+            }
+            Event::ClientMessage(e) => {
+                println!("ClientMessage event!");
+                events::client_message(&mut state, e);
+            }
+            _ => {}
         }
     }
 }

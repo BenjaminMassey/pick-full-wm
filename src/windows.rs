@@ -1,35 +1,40 @@
-use libc::{c_int, c_uint};
-use std::{ffi::CStr, ptr};
-use x11::xlib;
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{
+    AtomEnum, ConfigureWindowAux, ConnectionExt, StackMode, Window,
+};
 
-pub fn fill_main_space(state: &mut crate::state::State, window: xlib::Window) {
+pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
     let width =
         if state.settings.layout.conditional_full && state.workspace().side_windows.is_empty() {
             state.monitor().sizes.screen.0
         } else {
             state.monitor().sizes.main.0
         };
-    unsafe {
-        xlib::XMoveResizeWindow(
-            state.display,
+
+    state
+        .conn
+        .configure_window(
             window,
-            state.monitor().position.0,
-            state.monitor().position.1,
-            width as c_uint,
-            state.monitor().sizes.main.1 as c_uint,
-        );
-    }
+            &ConfigureWindowAux::new()
+                .x(state.monitor().position.0)
+                .y(state.monitor().position.1)
+                .width(width as u32)
+                .height(state.monitor().sizes.main.1 as u32),
+        )
+        .expect("Failed to configure main window");
+
+    state.conn.flush().expect("Failed to flush");
     state.mut_workspace().main_window = Some(window);
     focus_main(state);
 }
 
-pub fn send_side_space(state: &mut crate::state::State, window: xlib::Window) {
+pub fn send_side_space(state: &mut crate::state::State, window: Window) {
     remove_side_window(state, window);
     state.mut_workspace().side_windows.push(Some(window));
     layout_side_space(state);
 }
 
-pub fn remove_side_window(state: &mut crate::state::State, window: xlib::Window) {
+pub fn remove_side_window(state: &mut crate::state::State, window: Window) {
     let mut removes: Vec<usize> = vec![];
     for (index, side_window) in state.workspace().side_windows.iter().enumerate() {
         if side_window.is_none() || side_window.unwrap() == window {
@@ -42,7 +47,7 @@ pub fn remove_side_window(state: &mut crate::state::State, window: xlib::Window)
 }
 
 pub fn layout_side_space(state: &mut crate::state::State) {
-    let mut positions: Vec<(c_int, c_int)> = vec![];
+    let mut positions: Vec<(i32, i32)> = vec![];
     let section_size =
         state.monitor().sizes.side.1 as f32 / state.workspace().side_windows.len() as f32;
     for (index, window) in state.workspace().side_windows.iter().enumerate() {
@@ -51,84 +56,104 @@ pub fn layout_side_space(state: &mut crate::state::State) {
             println!(
                 "layout_side_space {} {},{} {}x{}",
                 window,
-                state.monitor().sizes.main.0 as c_int,
-                section_pos as c_int, // TODO: investigate cast
-                state.monitor().sizes.side.0 as c_uint,
-                section_size as c_uint, // TODO: investigate cast
+                state.monitor().sizes.main.0,
+                section_pos as i32,
+                state.monitor().sizes.side.0 as u32,
+                section_size as u32,
             );
             let position = (
-                (state.monitor().position.0 + state.monitor().sizes.main.0 as i32) as c_int,
-                (state.monitor().position.1 + section_pos as i32) as c_int, // TODO: investigate cast
+                state.monitor().position.0 + state.monitor().sizes.main.0,
+                state.monitor().position.1 + section_pos as i32,
             );
             positions.push(position);
-            unsafe {
-                xlib::XMoveResizeWindow(
-                    state.display,
+
+            state
+                .conn
+                .configure_window(
                     *window,
-                    position.0,
-                    position.1,
-                    state.monitor().sizes.side.0 as c_uint, // TODO: take into account x offset
-                    section_size as c_uint,                 // TODO: investigate cast
-                );
-            }
+                    &ConfigureWindowAux::new()
+                        .x(position.0)
+                        .y(position.1)
+                        .width(state.monitor().sizes.side.0 as u32)
+                        .height(section_size as u32),
+                )
+                .expect("Failed to configure side window");
         }
     }
+    state.conn.flush().expect("Failed to flush");
     audit_key_hints(state, &positions);
     if let Some(main) = state.workspace().main_window {
         fill_main_space(state, main);
     }
 }
 
-fn audit_key_hints(state: &mut crate::state::State, positions: &[(c_int, c_int)]) {
+fn audit_key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
     if !state.settings.bindings.key_hints {
         return;
     }
     for (i, k) in state.settings.bindings.swaps.clone().iter().enumerate() {
         if i < positions.len() {
             if state.workspace().key_hint_windows.contains_key(k) {
-                unsafe {
-                    xlib::XMoveResizeWindow(
-                        state.display,
+                state
+                    .conn
+                    .configure_window(
                         state.workspace().key_hint_windows[k],
-                        positions[i].0,
-                        positions[i].1,
-                        50 as c_uint, // TODO: connect to src/bin/key_hint.rs settings
-                        50 as c_uint,
-                    );
-                    xlib::XRaiseWindow(state.display, state.workspace().key_hint_windows[k]);
-                    xlib::XFlush(state.display);
-                }
+                        &ConfigureWindowAux::new()
+                            .x(positions[i].0)
+                            .y(positions[i].1)
+                            .width(50)
+                            .height(50),
+                    )
+                    .expect("Failed to configure key hint window");
+
+                state
+                    .conn
+                    .configure_window(
+                        state.workspace().key_hint_windows[k],
+                        &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+                    )
+                    .expect("Failed to raise key hint window");
+
+                state.conn.flush().expect("Failed to flush");
             } else {
                 crate::binaries::key_hint(k);
             }
         } else if let Some(key_hint) = state.workspace().key_hint_windows.get(k) {
-            unsafe {
-                xlib::XDestroyWindow(state.display, *key_hint);
-                xlib::XFlush(state.display);
-            }
+            state
+                .conn
+                .destroy_window(*key_hint)
+                .expect("Failed to destroy key hint window");
+            state.conn.flush().expect("Failed to flush");
             let _ = state.mut_workspace().key_hint_windows.remove(k);
         }
     }
 }
 
-pub fn fullscreen(state: &mut crate::state::State, window: xlib::Window) {
-    unsafe {
-        xlib::XMoveResizeWindow(
-            state.display,
+pub fn fullscreen(state: &mut crate::state::State, window: Window) {
+    state
+        .conn
+        .configure_window(
             window,
-            state.monitor().position.0
-                + ((state.monitor().sizes.main.0 + state.monitor().sizes.side.0)
-                    - state.monitor().sizes.screen.0),
-            state.monitor().position.1
-                + (state.monitor().sizes.main.1 - state.monitor().sizes.screen.1),
-            state.monitor().sizes.screen.0 as c_uint,
-            state.monitor().sizes.screen.1 as c_uint,
-        );
-    }
+            &ConfigureWindowAux::new()
+                .x(
+                    state.monitor().position.0
+                        + ((state.monitor().sizes.main.0 + state.monitor().sizes.side.0)
+                            - state.monitor().sizes.screen.0),
+                )
+                .y(
+                    state.monitor().position.1
+                        + (state.monitor().sizes.main.1 - state.monitor().sizes.screen.1),
+                )
+                .width(state.monitor().sizes.screen.0 as u32)
+                .height(state.monitor().sizes.screen.1 as u32),
+        )
+        .expect("Failed to fullscreen window");
+
+    state.conn.flush().expect("Failed to flush");
     focus_main(state);
 }
 
-pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window) -> bool {
+pub fn is_excepted_window(state: &mut crate::state::State, window: Window) -> bool {
     if is_help_window(state, window) || get_key_hint_window(state, window).is_some() {
         return true;
     }
@@ -143,7 +168,7 @@ pub fn is_excepted_window(state: &mut crate::state::State, window: xlib::Window)
     false
 }
 
-pub fn is_help_window(state: &mut crate::state::State, window: xlib::Window) -> bool {
+pub fn is_help_window(state: &mut crate::state::State, window: Window) -> bool {
     if let Some(name) = get_window_name(state, window)
         && name.contains("pfwm help")
     {
@@ -154,12 +179,12 @@ pub fn is_help_window(state: &mut crate::state::State, window: xlib::Window) -> 
 
 pub fn get_key_hint_window(
     state: &mut crate::state::State,
-    window: xlib::Window,
+    window: Window,
 ) -> Option<String> {
     if let Some(name) = get_window_name(state, window)
         && name.contains("key_hint")
     {
-        let pieces: Vec<&str> = name.split(" ").collect();
+        let pieces: Vec<&str> = name.split(' ').collect();
         if pieces.len() == 2 {
             return Some(pieces[1].to_owned());
         }
@@ -167,17 +192,19 @@ pub fn get_key_hint_window(
     None
 }
 
-pub fn get_window_name(state: &mut crate::state::State, window: xlib::Window) -> Option<String> {
-    let mut name_ptr: *mut i8 = ptr::null_mut();
-    let fetch = unsafe { xlib::XFetchName(state.display, window, &mut name_ptr) };
-    if fetch != 0 && !name_ptr.is_null() {
-        let c_name = unsafe { CStr::from_ptr(name_ptr) };
-        let name = c_name.to_string_lossy().into_owned();
-        unsafe { xlib::XFree(name_ptr as *mut _) };
-        Some(name)
-    } else {
-        None
+pub fn get_window_name(state: &mut crate::state::State, window: Window) -> Option<String> {
+    let reply = state
+        .conn
+        .get_property(false, window, AtomEnum::WM_NAME, AtomEnum::STRING, 0, 1024)
+        .ok()?
+        .reply()
+        .ok()?;
+
+    if reply.value.is_empty() {
+        return None;
     }
+
+    String::from_utf8(reply.value).ok()
 }
 
 pub fn run_command(command: &str) {
@@ -204,48 +231,49 @@ pub fn switch_workspace(state: &mut crate::state::State) {
         for index in 0..monitor.workspaces.len() {
             if index == state.current_workspace {
                 if let Some(main) = monitor.workspaces[index].main_window {
-                    unsafe { xlib::XMapWindow(state.display, main) };
+                    state.conn.map_window(main).expect("Failed to map main window");
                 }
                 for window in &monitor.workspaces[index].side_windows {
                     if let Some(window) = window {
-                        unsafe { xlib::XMapWindow(state.display, *window) };
+                        state.conn.map_window(*window).expect("Failed to map side window");
                     }
                 }
                 if let Some(help) = monitor.workspaces[index].help_window {
-                    unsafe { xlib::XMapWindow(state.display, help) };
+                    state.conn.map_window(help).expect("Failed to map help window");
                 }
                 for (_, window) in &monitor.workspaces[index].key_hint_windows {
-                    unsafe { xlib::XMapWindow(state.display, *window) };
+                    state.conn.map_window(*window).expect("Failed to map key hint window");
                 }
             } else {
                 if let Some(main) = monitor.workspaces[index].main_window {
-                    unsafe { xlib::XUnmapWindow(state.display, main) };
+                    state.conn.unmap_window(main).expect("Failed to unmap main window");
                 }
                 for window in &monitor.workspaces[index].side_windows {
                     if let Some(window) = window {
-                        unsafe { xlib::XUnmapWindow(state.display, *window) };
+                        state.conn.unmap_window(*window).expect("Failed to unmap side window");
                     }
                 }
                 if let Some(help) = monitor.workspaces[index].help_window {
-                    unsafe { xlib::XUnmapWindow(state.display, help) };
+                    state.conn.unmap_window(help).expect("Failed to unmap help window");
                 }
                 for (_, window) in &monitor.workspaces[index].key_hint_windows {
-                    unsafe { xlib::XUnmapWindow(state.display, *window) };
+                    state.conn.unmap_window(*window).expect("Failed to unmap key hint window");
                 }
             }
         }
     }
-    unsafe { xlib::XFlush(state.display) };
+    // Flush after all map/unmap operations
+    state.conn.flush().expect("Failed to flush");
     crate::ewmh::update_workspace(state);
     crate::ewmh::clear_active(state);
     for i in 0..state.monitors.len() {
-        let real_monitor = state.current_monitor; // TODO: gross
-        state.current_monitor = i; // TODO: gross
+        let real_monitor = state.current_monitor;
+        state.current_monitor = i;
         if let Some(main) = state.workspace().main_window {
             fill_main_space(state, main);
         }
         layout_side_space(state);
-        state.current_monitor = real_monitor; // TODO: gross
+        state.current_monitor = real_monitor;
     }
     crate::windows::focus_main(state);
 }

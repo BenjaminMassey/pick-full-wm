@@ -1,11 +1,17 @@
-use libc::c_int;
-use std::{collections::HashMap, mem::zeroed};
-use x11::{xlib, xrandr};
+use std::collections::HashMap;
+use x11rb::connection::Connection;
+use x11rb::protocol::randr::{self, ConnectionExt as RandrConnectionExt};
+use x11rb::protocol::xproto::Window;
+use x11rb::rust_connection::RustConnection;
+
+use crate::atoms::Atoms;
 
 pub struct State {
     pub settings: crate::settings::Settings,
-    pub display: *mut xlib::Display,
-    pub event: xlib::XEvent,
+    pub conn: RustConnection,
+    pub screen_num: usize,
+    pub root: Window,
+    pub atoms: Atoms,
     pub monitors: Vec<Monitor>,
     pub current_monitor: usize,
     pub current_workspace: usize,
@@ -13,26 +19,29 @@ pub struct State {
 impl State {
     pub fn init() -> Self {
         let settings = crate::settings::get_settings();
-        let arg0 = 0x0_i8;
-        let display = crate::setup::display(arg0);
-        if display.is_null() {
-            eprintln!("Display \"{}\" is null.", arg0);
-            std::process::exit(1);
-        }
-        let event: xlib::XEvent = unsafe { zeroed() };
-        let mut monitor_infos = get_monitor_infos(display);
+        let (conn, screen_num) = crate::setup::connect();
+        let screen = &conn.setup().roots[screen_num];
+        let root = screen.root;
+        let atoms = Atoms::new(&conn)
+            .expect("Failed to intern atoms")
+            .reply()
+            .expect("Failed to get atom reply");
+
+        let mut monitor_infos = get_monitor_infos(&conn, root);
         monitor_infos.sort_by_key(|m| m.position.0);
         let mut monitors: Vec<Monitor> = vec![];
         for (index, info) in monitor_infos.iter().enumerate() {
             info.print();
-            let monitor = Monitor::new(&settings, &info, index);
+            let monitor = Monitor::new(&settings, info, index);
             monitor.print();
             monitors.push(monitor);
         }
         Self {
             settings,
-            display,
-            event,
+            conn,
+            screen_num,
+            root,
+            atoms,
             monitors,
             current_monitor: 0,
             current_workspace: 0,
@@ -63,7 +72,7 @@ impl Monitor {
         monitor_info: &MonitorInfo,
         index: usize,
     ) -> Self {
-        let sizes = Sizes::init(&settings, monitor_info, index);
+        let sizes = Sizes::init(settings, monitor_info, index);
         let parsed_position = crate::calc::get_position(
             sizes.screen.0 as f32,
             sizes.screen.1 as f32,
@@ -95,9 +104,9 @@ impl Monitor {
 }
 
 pub struct Sizes {
-    pub screen: (c_int, c_int),
-    pub main: (c_int, c_int),
-    pub side: (c_int, c_int),
+    pub screen: (i32, i32),
+    pub main: (i32, i32),
+    pub side: (i32, i32),
 }
 impl Sizes {
     pub fn init(
@@ -105,7 +114,7 @@ impl Sizes {
         monitor_info: &MonitorInfo,
         index: usize,
     ) -> Self {
-        let screen: (c_int, c_int) = (monitor_info.size.0 as c_int, monitor_info.size.1 as c_int);
+        let screen: (i32, i32) = (monitor_info.size.0 as i32, monitor_info.size.1 as i32);
         let main = crate::calc::get_full_size(
             screen.0 as f32,
             screen.1 as f32,
@@ -117,10 +126,10 @@ impl Sizes {
 }
 
 pub struct Workspace {
-    pub main_window: Option<xlib::Window>,
-    pub side_windows: Vec<Option<xlib::Window>>,
-    pub help_window: Option<xlib::Window>,
-    pub key_hint_windows: HashMap<String, xlib::Window>,
+    pub main_window: Option<Window>,
+    pub side_windows: Vec<Option<Window>>,
+    pub help_window: Option<Window>,
+    pub key_hint_windows: HashMap<String, Window>,
     pub fullscreen: bool,
 }
 impl Workspace {
@@ -148,34 +157,34 @@ impl MonitorInfo {
     }
 }
 
-pub fn get_monitor_infos(display: *mut xlib::Display) -> Vec<MonitorInfo> {
+pub fn get_monitor_infos(conn: &RustConnection, root: Window) -> Vec<MonitorInfo> {
     let mut monitor_infos: Vec<MonitorInfo> = vec![];
-    let root = unsafe { xlib::XDefaultRootWindow(display) };
-    let resources = unsafe { xrandr::XRRGetScreenResources(display, root) };
-    if resources.is_null() {
-        panic!("unable to get screen resources via xrandr"); // TODO: logging/grace
-    }
-    let res = unsafe { &*resources };
-    for i in 0..res.noutput {
-        let output = unsafe { *res.outputs.offset(i as isize) };
-        let output_info = unsafe { xrandr::XRRGetOutputInfo(display, resources, output) };
-        if output_info.is_null() {
-            panic!("unable to get output info via xrandr for #{}", i); // TODO: logging/grace
+
+    let resources = conn
+        .randr_get_screen_resources(root)
+        .expect("Failed to get screen resources")
+        .reply()
+        .expect("Failed to get screen resources reply");
+
+    for &output in &resources.outputs {
+        let output_info = conn
+            .randr_get_output_info(output, resources.config_timestamp)
+            .expect("Failed to get output info")
+            .reply()
+            .expect("Failed to get output info reply");
+
+        if output_info.connection == randr::Connection::CONNECTED && output_info.crtc != 0 {
+            let crtc_info = conn
+                .randr_get_crtc_info(output_info.crtc, resources.config_timestamp)
+                .expect("Failed to get crtc info")
+                .reply()
+                .expect("Failed to get crtc info reply");
+
+            monitor_infos.push(MonitorInfo {
+                position: (crtc_info.x as i32, crtc_info.y as i32),
+                size: (crtc_info.width as u32, crtc_info.height as u32),
+            });
         }
-        let info = unsafe { &*output_info };
-        if info.connection as i32 == xrandr::RR_Connected && info.crtc != 0 {
-            let crtc_info = unsafe { xrandr::XRRGetCrtcInfo(display, resources, info.crtc) };
-            if !crtc_info.is_null() {
-                let crtc = unsafe { &*crtc_info };
-                monitor_infos.push(MonitorInfo {
-                    position: (crtc.x, crtc.y),
-                    size: (crtc.width, crtc.height),
-                });
-                unsafe { xrandr::XRRFreeCrtcInfo(crtc_info) };
-            }
-        }
-        unsafe { xrandr::XRRFreeOutputInfo(output_info) };
     }
-    unsafe { xrandr::XRRFreeScreenResources(resources) };
     monitor_infos
 }
