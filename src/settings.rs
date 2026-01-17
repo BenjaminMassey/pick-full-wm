@@ -11,6 +11,7 @@ pub struct Layout {
     pub main_size: Vec<String>,
     pub top_left: Vec<String>,
     pub conditional_full: bool,
+    pub new_to_main: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -45,6 +46,7 @@ impl Settings {
                 main_size: vec!["80%x96%".to_owned(), "80%x100%".to_owned()],
                 top_left: vec!["0,4%".to_owned(), "0,0".to_owned()],
                 conditional_full: true,
+                new_to_main: true,
             },
             bindings: Bindings {
                 launcher: "space".to_owned(),

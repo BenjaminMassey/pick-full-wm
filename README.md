@@ -44,7 +44,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Built-in multi-monitor support
 - [x] Tiling exceptions for pop-up style windows
 - [x] Some implementation of virtual workspaces
-- [ ] Optionally set new windows to main space
+- [x] Set new windows to main space (optional)
 - [ ] Ability to swap between floating and tiled
 - [ ] Support for monitor rotation
 - [ ] Way to move floating windows

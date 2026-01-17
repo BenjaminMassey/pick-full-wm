@@ -43,10 +43,15 @@ pub fn map_request(state: &mut crate::state::State) {
         crate::windows::center_window(state, event.window);
         return;
     }
-    if state.workspace().main_window.is_none() {
-        crate::windows::fill_main_space(state, event.window);
+    if let Some(main) = state.workspace().main_window {
+        if state.settings.layout.new_to_main {
+            crate::windows::send_side_space(state, main);
+            crate::windows::fill_main_space(state, event.window);
+        } else {
+            crate::windows::send_side_space(state, event.window);
+        }
     } else {
-        crate::windows::send_side_space(state, event.window);
+        crate::windows::fill_main_space(state, event.window);
     }
 }
 
