@@ -266,11 +266,33 @@ pub fn client_message(state: &mut crate::state::State) {
             xlib::False,
         )
     };
+    let net_active_window = unsafe {
+        xlib::XInternAtom(
+            state.display,
+            std::ffi::CString::new("_NET_ACTIVE_WINDOW")
+                .unwrap()
+                .as_ptr(),
+            xlib::False,
+        )
+    };
     if event.message_type == net_current_desktop {
         let requested_workspace = event.data.get_long(0) as usize;
         if state.current_workspace != requested_workspace {
             state.current_workspace = requested_workspace;
             crate::windows::switch_workspace(state);
+        }
+    } else if event.message_type == net_active_window {
+        let monitor_index = crate::windows::get_monitor_index(state, &event.window);
+        if monitor_index != state.current_monitor {
+            state.current_monitor = monitor_index;
+        }
+        if let Some(existing) = state.workspace().main_window {
+            if existing == event.window {
+                return;
+            }
+            crate::windows::remove_side_window(state, event.window);
+            crate::windows::fill_main_space(state, event.window);
+            crate::windows::send_side_space(state, existing);
         }
     }
 }

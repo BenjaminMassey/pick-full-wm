@@ -443,7 +443,44 @@ pub fn audit_main(state: &mut crate::state::State) {
         }
     }
 }
+
 pub fn full_audit(state: &mut crate::state::State) {
     audit_main(state);
     audit_side_windows(state);
+    crate::ewmh::update_client_list(state);
+}
+
+pub fn get_monitor_index(state: &crate::state::State, window: &xlib::Window) -> usize {
+    for (monitor_index, monitor) in state.monitors.iter().enumerate() {
+        for workspace in &monitor.workspaces {
+            if let Some(main) = workspace.main_window
+                && &main == window
+            {
+                return monitor_index;
+            }
+            for side_window in &workspace.side_windows {
+                if let Some(side) = side_window
+                    && side == window
+                {
+                    return monitor_index;
+                }
+            }
+            for floating in &workspace.floatings {
+                if floating == window {
+                    return monitor_index;
+                }
+            }
+            for (_, key_window) in &workspace.key_hint_windows {
+                if key_window == window {
+                    return monitor_index;
+                }
+            }
+            if let Some(help) = workspace.help_window
+                && &help == window
+            {
+                return monitor_index;
+            }
+        }
+    }
+    0
 }
