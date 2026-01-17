@@ -42,9 +42,16 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Keybinding visual "hints" for side windows
 - [x] Work with Extended Window Manager Hints
 - [x] Built-in multi-monitor support
+- [x] Tiling exceptions for pop-up style windows
+- [x] Some implementation of virtual workspaces
+- [ ] Optionally set new windows to main space
+- [ ] Ability to swap between floating and tiled
+- [ ] Support for monitor rotation
+- [ ] Way to move floating windows
+- [ ] Logging
+- [ ] Mouse-driven way to close main window
+- [ ] Ability to move windows between monitors
 - [ ] Wallpaper support
-- [ ] Tiling exceptions for pop-up style windows
-- [ ] Some implementation of virtual workspaces
 - [ ] Integration with "cargo deb"
 - [ ] Support for screenshot and capture tools
 
