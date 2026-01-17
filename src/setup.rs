@@ -55,6 +55,7 @@ pub fn mouse_input(state: &mut crate::state::State) {
 pub fn key_input(state: &mut crate::state::State) {
     std::thread::sleep(std::time::Duration::from_millis(500));
     // allows time for login manager to ungrab properly
+    let root = unsafe { xlib::XDefaultRootWindow(state.display) };
     for k in crate::keymap::get_key_strings(state) {
         let key = crate::keymap::parse_string(&k);
         if let Some(key) = key {
@@ -63,7 +64,7 @@ pub fn key_input(state: &mut crate::state::State) {
                     state.display,
                     xlib::XKeysymToKeycode(state.display, key as u64) as i32,
                     xlib::Mod4Mask, // super key
-                    xlib::XDefaultRootWindow(state.display),
+                    root,
                     xlib::True,
                     xlib::GrabModeAsync,
                     xlib::GrabModeAsync,
@@ -72,6 +73,19 @@ pub fn key_input(state: &mut crate::state::State) {
         } else {
             eprintln!("unknown key in settings: {}", k);
         }
+    }
+    if let Some(key) = crate::keymap::parse_string(&state.settings.bindings.monitor) {
+        unsafe {
+            xlib::XGrabKey(
+                state.display,
+                xlib::XKeysymToKeycode(state.display, key as u64) as i32,
+                xlib::Mod4Mask | xlib::ShiftMask, // super key + shift key
+                root,
+                xlib::True,
+                xlib::GrabModeAsync,
+                xlib::GrabModeAsync,
+            )
+        };
     }
 }
 

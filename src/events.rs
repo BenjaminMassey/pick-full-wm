@@ -200,7 +200,26 @@ pub fn key(state: &mut crate::state::State) {
                 );
                 xlib::XFlush(state.display);
             }
+            let move_target = state.workspace().main_window.clone();
+            if move_target.is_some() && (event.state & xlib::ShiftMask) != 0 {
+                state.mut_workspace().main_window = None;
+                if !state.workspace().side_windows.is_empty()
+                    && let Some(target) = state.workspace().side_windows[0]
+                {
+                    crate::windows::remove_side_window(state, target);
+                    crate::windows::fill_main_space(state, target);
+                }
+            }
             state.current_monitor = index;
+            if move_target.is_some() && (event.state & xlib::ShiftMask) != 0 {
+                if let Some(main) = state.workspace().main_window {
+                    state.mut_workspace().main_window = None;
+                    crate::windows::send_side_space(state, main);
+                }
+                if let Some(target) = move_target {
+                    crate::windows::fill_main_space(state, target);
+                }
+            }
             crate::windows::focus_main(state);
         }
     }

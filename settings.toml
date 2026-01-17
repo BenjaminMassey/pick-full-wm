@@ -21,4 +21,4 @@ help = "h"
 key_hints = true
 terminal = "t"
 workspaces = [ "1", "2", "3", "4" ] # also defines how many
-monitor = "tab" # cycle monitor index
+monitor = "tab" # cycle monitor index (hold shift for monitor move)
