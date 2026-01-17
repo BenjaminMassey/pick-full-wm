@@ -51,6 +51,7 @@ fn main() {
                 }
                 _ => {}
             };
+            crate::windows::full_audit(&mut state);
         }
     }
 }

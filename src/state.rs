@@ -121,6 +121,7 @@ pub struct Workspace {
     pub side_windows: Vec<Option<xlib::Window>>,
     pub help_window: Option<xlib::Window>,
     pub key_hint_windows: HashMap<String, xlib::Window>,
+    pub floatings: Vec<xlib::Window>,
     pub fullscreen: bool,
 }
 impl Workspace {
@@ -130,6 +131,7 @@ impl Workspace {
             side_windows: vec![],
             help_window: None,
             key_hint_windows: HashMap::new(),
+            floatings: vec![],
             fullscreen: false,
         }
     }

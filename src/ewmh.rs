@@ -19,12 +19,14 @@ pub fn set_active(state: &mut crate::state::State, window: xlib::Window) {
             1,
         );
         if crate::safety::window_exists(state, window) {
-            xlib::XSetInputFocus(
-                state.display,
-                window,
-                xlib::RevertToPointerRoot,
-                xlib::CurrentTime,
-            );
+            if state.workspace().floatings.is_empty() {
+                xlib::XSetInputFocus(
+                    state.display,
+                    window,
+                    xlib::RevertToPointerRoot,
+                    xlib::CurrentTime,
+                );
+            }
             xlib::XRaiseWindow(state.display, window);
         }
         xlib::XFlush(state.display);

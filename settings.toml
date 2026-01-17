@@ -1,7 +1,7 @@
 title = "pick-full-wm"
 
 [applications]
-startups = [ "polybar", "rofi -show drun" ]
+startups = [ "polybar" ]
 launcher = "rofi -show drun"
 excluded = [ "polybar", "rofi" ]
 terminal = "alacritty"

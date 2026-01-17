@@ -36,8 +36,8 @@ impl Settings {
     fn default() -> Self {
         Self {
             applications: Applications {
-                startups: vec!["polybar".to_owned(), "rofi -show run".to_owned()],
-                launcher: "rofi -show run".to_owned(),
+                startups: vec!["polybar".to_owned()],
+                launcher: "rofi -show drun".to_owned(),
                 excluded: vec!["polybar".to_owned(), "rofi".to_owned()],
                 terminal: "alacritty".to_owned(),
             },

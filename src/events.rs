@@ -2,6 +2,11 @@ use x11::xlib;
 
 pub fn map_request(state: &mut crate::state::State) {
     let event: xlib::XMapRequestEvent = From::from(state.event);
+    println!(
+        "Map Window: {:?} ({})",
+        crate::windows::get_window_name(state, event.window),
+        event.window,
+    );
     if !crate::safety::window_exists(state, event.window) {
         unsafe { xlib::XAllowEvents(state.display, xlib::AsyncBoth, xlib::CurrentTime) };
         return;
@@ -9,7 +14,12 @@ pub fn map_request(state: &mut crate::state::State) {
     unsafe { xlib::XMapWindow(state.display, event.window) };
     if let Some(key) = crate::windows::get_key_hint_window(state, event.window) {
         if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
+            let old_key = entry.clone();
             *entry = event.window;
+            if old_key != event.window && crate::safety::window_exists(state, old_key) {
+                unsafe { xlib::XDestroyWindow(state.display, old_key) };
+                unsafe { xlib::XFlush(state.display) };
+            }
         } else {
             state
                 .mut_workspace()
@@ -28,6 +38,11 @@ pub fn map_request(state: &mut crate::state::State) {
     if crate::windows::is_excepted_window(state, event.window) {
         return;
     }
+    if crate::windows::is_popup(state, event.window) {
+        state.mut_workspace().floatings.push(event.window);
+        crate::windows::center_window(state, event.window);
+        return;
+    }
     if state.workspace().main_window.is_none() {
         crate::windows::fill_main_space(state, event.window);
     } else {
@@ -37,8 +52,9 @@ pub fn map_request(state: &mut crate::state::State) {
 
 pub fn button(state: &mut crate::state::State) {
     let event: xlib::XButtonEvent = From::from(state.event);
-    if !crate::safety::window_exists(state, event.window)
+    if !crate::safety::window_exists(state, event.subwindow)
         || crate::windows::is_excepted_window(state, event.subwindow)
+        || crate::windows::is_popup(state, event.subwindow)
     {
         unsafe { xlib::XAllowEvents(state.display, xlib::ReplayPointer, xlib::CurrentTime) };
         return;
@@ -187,7 +203,20 @@ pub fn key(state: &mut crate::state::State) {
 
 pub fn destroy(state: &mut crate::state::State) {
     let event: xlib::XDestroyWindowEvent = From::from(state.event);
+    println!(
+        "Destroy Window: {:?} ({})",
+        crate::windows::get_window_name(state, event.window),
+        event.window,
+    );
     for i in 0..state.monitor().workspaces.len() {
+        if state.monitor().workspaces[i]
+            .floatings
+            .contains(&event.window)
+        {
+            crate::windows::remove_floating(state, &event.window);
+            crate::windows::focus_main(state);
+            return;
+        }
         if let Some(help) = state.monitor().workspaces[i].help_window
             && event.window == help
         {
