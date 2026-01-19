@@ -1,3 +1,4 @@
+use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
     AtomEnum, ButtonIndex, ChangeWindowAttributesAux, ConnectionExt, CreateWindowAux, EventMask,
@@ -5,7 +6,6 @@ use x11rb::protocol::xproto::{
 };
 use x11rb::rust_connection::RustConnection;
 use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
-use x11rb::CURRENT_TIME;
 
 pub fn run_startups(state: &mut crate::state::State) {
     for startup in &state.settings.applications.startups {
@@ -31,7 +31,8 @@ pub fn dbus_init() {
 }
 
 pub fn mouse_input(state: &mut crate::state::State) {
-    let event_mask = EventMask::BUTTON_PRESS | EventMask::BUTTON_RELEASE | EventMask::POINTER_MOTION;
+    let event_mask =
+        EventMask::BUTTON_PRESS | EventMask::BUTTON_RELEASE | EventMask::POINTER_MOTION;
 
     // Left mouse button
     state
@@ -68,7 +69,6 @@ pub fn mouse_input(state: &mut crate::state::State) {
 
 pub fn key_input(state: &mut crate::state::State) {
     std::thread::sleep(std::time::Duration::from_millis(500));
-
     for k in crate::keymap::get_key_strings(state) {
         let keysym = crate::keymap::parse_string(&k);
         if let Some(keysym) = keysym {
@@ -88,6 +88,27 @@ pub fn key_input(state: &mut crate::state::State) {
         } else {
             eprintln!("unknown key in settings: {}", k);
         }
+    }
+    let keysym = crate::keymap::parse_string(&state.settings.bindings.monitor);
+    if let Some(keysym) = keysym {
+        if let Some(keycode) = keysym_to_keycode(&state.conn, state.root, keysym) {
+            state
+                .conn
+                .grab_key(
+                    true,
+                    state.root,
+                    ModMask::M4 | ModMask::SHIFT,
+                    keycode,
+                    GrabMode::ASYNC,
+                    GrabMode::ASYNC,
+                )
+                .expect("Failed to grab key");
+        }
+    } else {
+        eprintln!(
+            "unknown key in settings: {}",
+            &state.settings.bindings.monitor
+        );
     }
 }
 
@@ -158,7 +179,10 @@ pub fn connect() -> (RustConnection, usize) {
 
 pub fn init_ewmh(state: &mut crate::state::State) {
     // Create a dummy window for EWMH compliance check
-    let check_window = state.conn.generate_id().expect("Failed to generate window id");
+    let check_window = state
+        .conn
+        .generate_id()
+        .expect("Failed to generate window id");
     state
         .conn
         .create_window(

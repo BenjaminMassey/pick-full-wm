@@ -4,13 +4,11 @@ use x11rb::protocol::randr::{self, ConnectionExt as RandrConnectionExt};
 use x11rb::protocol::xproto::Window;
 use x11rb::rust_connection::RustConnection;
 
-use crate::atoms::Atoms;
-
 pub struct State {
     pub settings: crate::settings::Settings,
     pub conn: RustConnection,
     pub root: Window,
-    pub atoms: Atoms,
+    pub atoms: crate::atoms::Atoms,
     pub monitors: Vec<Monitor>,
     pub current_monitor: usize,
     pub current_workspace: usize,
@@ -21,7 +19,7 @@ impl State {
         let (conn, screen_num) = crate::setup::connect();
         let screen = &conn.setup().roots[screen_num];
         let root = screen.root;
-        let atoms = Atoms::new(&conn)
+        let atoms = crate::atoms::Atoms::new(&conn)
             .expect("Failed to intern atoms")
             .reply()
             .expect("Failed to get atom reply");
@@ -127,6 +125,7 @@ pub struct Workspace {
     pub side_windows: Vec<Option<Window>>,
     pub help_window: Option<Window>,
     pub key_hint_windows: HashMap<String, Window>,
+    pub floatings: Vec<Window>,
     pub fullscreen: bool,
 }
 impl Workspace {
@@ -136,6 +135,7 @@ impl Workspace {
             side_windows: vec![],
             help_window: None,
             key_hint_windows: HashMap::new(),
+            floatings: vec![],
             fullscreen: false,
         }
     }

@@ -7,7 +7,7 @@ use pick_full_wm::settings;
 fn main() -> eframe::Result {
     // TODO: dynamic sizing
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([550.0, 325.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([550.0, 375.0]),
         centered: true,
         ..Default::default()
     };
@@ -41,12 +41,14 @@ impl eframe::App for HelpWindow {
             std::process::exit(0);
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Pick Full WM - Keybindings Help Menu");
+            ui.label("Pick Full WM - Help Menu");
             ui.label("");
             ui.label(&format!(
                 "[SUPER] + [{}]: open this help menu",
                 &self.settings.bindings.help.to_uppercase()
             ));
+            ui.label("[LEFT CLICK]: make side window main");
+            ui.label("[RIGHT CLICK]: kill side window");
             ui.label(&format!(
                 "[SUPER] + [{}]: open application launcher",
                 &self.settings.bindings.launcher.to_uppercase()
@@ -73,6 +75,10 @@ impl eframe::App for HelpWindow {
             ));
             ui.label(&format!(
                 "[SUPER] + [{}]: cycle monitor index",
+                &self.settings.bindings.monitor.to_uppercase()
+            ));
+            ui.label(&format!(
+                "[SUPER] + [SHIFT] + [{}]: move to next monitor",
                 &self.settings.bindings.monitor.to_uppercase()
             ));
             ui.label("");

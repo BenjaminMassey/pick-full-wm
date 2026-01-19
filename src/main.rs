@@ -23,7 +23,10 @@ fn main() {
     setup::windows(&mut state);
 
     loop {
-        let event = state.conn.wait_for_event().expect("Failed to wait for event");
+        let event = state
+            .conn
+            .wait_for_event()
+            .expect("Failed to wait for event");
         calc::update_current_monitor(&mut state);
         match event {
             Event::MapRequest(e) => {
@@ -48,5 +51,6 @@ fn main() {
             }
             _ => {}
         }
+        crate::windows::full_audit(&mut state);
     }
 }

@@ -99,9 +99,7 @@ fn audit_key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
                     state.workspace().key_hint_windows[k],
                     &ConfigureWindowAux::new()
                         .x(positions[i].0)
-                        .y(positions[i].1)
-                        .width(50) // TODO: connect to src/bin/key_hint.rs sizing directly
-                        .height(50), // TODO: connect to src/bin/key_hint.rs sizing directly
+                        .y(positions[i].1),
                 ) {
                     eprintln!("windows::audit_key_hints(..) move window error: {:?}", e);
                 }
@@ -117,7 +115,8 @@ fn audit_key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
                     eprintln!("windows::audit_key_hints(..) flush error: {:?}", e);
                 }
             } else {
-                crate::binaries::key_hint(k);
+                state.mut_workspace().key_hint_windows.insert(k.clone(), 0); // TODO: this is silly
+                crate::binaries::key_hint(k); // will get captured by event.rs map_window
             }
         } else if let Some(key_hint) = state.workspace().key_hint_windows.get(k) {
             if let Err(e) = state.conn.destroy_window(*key_hint) {
@@ -157,7 +156,6 @@ pub fn is_excepted_window(state: &mut crate::state::State, window: Window) -> bo
         return true;
     }
     if let Some(name) = get_window_name(state, window) {
-        println!("window name: {}", &name);
         for exception in &state.settings.applications.excluded {
             if name.contains(exception) {
                 return true;
@@ -219,6 +217,10 @@ pub fn focus_main(state: &mut crate::state::State) {
         && crate::safety::window_exists(state, window)
     {
         crate::ewmh::set_active(state, window);
+        reapply_float_windows(state);
+    }
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::focus_main(..) flush error: {:?}", e);
     }
 }
 
@@ -248,6 +250,11 @@ pub fn switch_workspace(state: &mut crate::state::State) {
                         eprintln!("windows::switch_workspace(..) map window error: {:?}", e);
                     }
                 }
+                for window in &monitor.workspaces[index].floatings {
+                    if let Err(e) = state.conn.map_window(*window) {
+                        eprintln!("windows::switch_workspace(..) map window error: {:?}", e);
+                    }
+                }
             } else {
                 if let Some(main) = monitor.workspaces[index].main_window {
                     if let Err(e) = state.conn.unmap_window(main) {
@@ -271,6 +278,11 @@ pub fn switch_workspace(state: &mut crate::state::State) {
                         eprintln!("windows::switch_workspace(..) unmap window error: {:?}", e);
                     }
                 }
+                for window in &monitor.workspaces[index].floatings {
+                    if let Err(e) = state.conn.unmap_window(*window) {
+                        eprintln!("windows::switch_workspace(..) unmap window error: {:?}", e);
+                    }
+                }
             }
         }
     }
@@ -289,4 +301,196 @@ pub fn switch_workspace(state: &mut crate::state::State) {
         state.current_monitor = real_monitor; // TODO: shouldn't need temp like this
     }
     crate::windows::focus_main(state);
+}
+
+pub fn is_popup(state: &crate::state::State, window: Window) -> bool {
+    // Check 1: Override-redirect windows (menus, tooltips)
+    if let Ok(attrs) = state.conn.get_window_attributes(window) {
+        if let Ok(attrs_reply) = attrs.reply() {
+            if attrs_reply.override_redirect {
+                return true;
+            }
+        }
+    }
+
+    // Check 2: Transient windows (dialogs with parent)
+    if let Ok(prop) = state.conn.get_property(
+        false,
+        window,
+        AtomEnum::WM_TRANSIENT_FOR,
+        AtomEnum::WINDOW,
+        0,
+        1,
+    ) {
+        if let Ok(reply) = prop.reply() {
+            if reply.value_len > 0 {
+                return true;
+            }
+        }
+    }
+
+    // Check 3: Window type hints
+    if let Ok(prop) = state.conn.get_property(
+        false,
+        window,
+        state.atoms._NET_WM_WINDOW_TYPE,
+        AtomEnum::ATOM,
+        0,
+        1024,
+    ) {
+        if let Ok(reply) = prop.reply() {
+            if reply.value_len > 0 {
+                // Parse as list of atoms
+                let window_types: Vec<x11rb::protocol::xproto::Atom> = reply
+                    .value32()
+                    .map(|iter| iter.collect())
+                    .unwrap_or_default();
+
+                // Check if any type matches popup/dialog types
+                for &window_type in &window_types {
+                    if window_type == state.atoms._NET_WM_WINDOW_TYPE_DIALOG
+                        || window_type == state.atoms._NET_WM_WINDOW_TYPE_UTILITY
+                        || window_type == state.atoms._NET_WM_WINDOW_TYPE_SPLASH
+                        || window_type == state.atoms._NET_WM_WINDOW_TYPE_NOTIFICATION
+                        || window_type == state.atoms._NET_WM_WINDOW_TYPE_POPUP_MENU
+                        || window_type == state.atoms._NET_WM_WINDOW_TYPE_DROPDOWN_MENU
+                        || window_type == state.atoms._NET_WM_WINDOW_TYPE_TOOLTIP
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    false
+}
+
+pub fn reapply_float_windows(state: &mut crate::state::State) {
+    for window in state.workspace().floatings.clone() {
+        if crate::safety::window_exists(state, window) {
+            if let Err(e) = state.conn.configure_window(
+                window,
+                &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+            ) {
+                eprintln!(
+                    "windows::reapply_float_windows(..) raise window error: {:?}",
+                    e
+                );
+            }
+
+            if let Err(e) = state.conn.flush() {
+                eprintln!("windows::reapply_float_windows(..) flush error: {:?}", e);
+            }
+        } else {
+            remove_floating(state, window);
+            layout_side_space(state);
+        }
+    }
+}
+
+pub fn remove_floating(state: &mut crate::state::State, window: Window) {
+    let mut removes: Vec<usize> = vec![];
+    for (index, floating) in state.workspace().floatings.iter().enumerate() {
+        if floating == &window {
+            removes.push(index);
+        }
+    }
+    for remove in removes {
+        state.mut_workspace().floatings.remove(remove);
+    }
+}
+
+pub fn center_window(state: &mut crate::state::State, window: Window) {
+    if let Ok(geometry) = state.conn.get_geometry(window)
+        && let Ok(geometry) = geometry.reply()
+    {
+        if let Err(e) = state.conn.configure_window(
+            window,
+            &ConfigureWindowAux::new()
+                .x(state.monitor().position.0
+                    + ((state.monitor().sizes.screen.0 - geometry.width as i32) as f32 / 2f32)
+                        as i32)
+                .y(state.monitor().position.1
+                    + ((state.monitor().sizes.screen.1 - geometry.height as i32) as f32 / 2f32)
+                        as i32),
+        ) {
+            eprintln!("windows::center_window(..) move window error: {:?}", e);
+        }
+    }
+
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::center_window(..) flush error: {:?}", e);
+    }
+}
+
+pub fn audit_side_windows(state: &mut crate::state::State) {
+    let mut change = false;
+    for window in state.workspace().side_windows.clone() {
+        if let Some(window) = window
+            && !crate::safety::window_exists(state, window)
+        {
+            remove_side_window(state, window);
+            change = true;
+        }
+    }
+    if change {
+        layout_side_space(state);
+    }
+}
+
+pub fn audit_main(state: &mut crate::state::State) {
+    if let Some(main) = state.workspace().main_window
+        && !crate::safety::window_exists(state, main)
+    {
+        state.mut_workspace().main_window = None;
+        audit_side_windows(state);
+        if !state.workspace().side_windows.is_empty()
+            && let Some(target) = state.workspace().side_windows[0]
+        {
+            fill_main_space(state, target);
+            remove_side_window(state, target);
+        }
+    }
+}
+
+pub fn full_audit(state: &mut crate::state::State) {
+    audit_main(state);
+    audit_side_windows(state);
+    crate::ewmh::update_client_list(state);
+}
+
+pub fn get_monitor_index(state: &crate::state::State, window: Window) -> usize {
+    for (monitor_index, monitor) in state.monitors.iter().enumerate() {
+        for workspace in &monitor.workspaces {
+            if let Some(main) = workspace.main_window
+                && main == window
+            {
+                return monitor_index;
+            }
+            for side_window in &workspace.side_windows {
+                if let Some(side) = side_window
+                    && side == &window
+                {
+                    return monitor_index;
+                }
+            }
+            for floating in &workspace.floatings {
+                if floating == &window {
+                    return monitor_index;
+                }
+            }
+            for (_, key_window) in &workspace.key_hint_windows {
+                if key_window == &window {
+                    return monitor_index;
+                }
+            }
+            if let Some(help) = workspace.help_window
+                && help == window
+            {
+                return monitor_index;
+            }
+        }
+    }
+    0
 }

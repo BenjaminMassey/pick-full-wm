@@ -1,7 +1,7 @@
 title = "pick-full-wm"
 
 [applications]
-startups = [ "polybar", "rofi -show drun" ]
+startups = [ "polybar" ]
 launcher = "rofi -show drun"
 excluded = [ "polybar", "rofi" ]
 terminal = "alacritty"
@@ -10,6 +10,7 @@ terminal = "alacritty"
 main_size = [ "80%x96%", "80%x100%" ] # define per monitor
 top_left = [ "0,4%", "0,0" ] # define per monitor
 conditional_full = true # fill side if none
+new_to_main = true # new windows fill main area, rather than send to side
 
 [bindings]
 launcher = "space"
@@ -20,4 +21,4 @@ help = "h"
 key_hints = true
 terminal = "t"
 workspaces = [ "1", "2", "3", "4" ] # also defines how many
-monitor = "tab" # cycle monitor index
+monitor = "tab" # cycle monitor index (hold shift for monitor move)
