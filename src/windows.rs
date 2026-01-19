@@ -72,7 +72,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                 &ConfigureWindowAux::new()
                     .x(position.0)
                     .y(position.1)
-                    .width(state.monitor().sizes.side.0 as u32)
+                    .width(state.monitor().sizes.side.0 as u32) // TODO: take into account x offset
                     .height(section_size as u32),
             ) {
                 eprintln!("windows::layout_side_space(..) move window error: {:?}", e);
@@ -100,8 +100,8 @@ fn audit_key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
                     &ConfigureWindowAux::new()
                         .x(positions[i].0)
                         .y(positions[i].1)
-                        .width(50)
-                        .height(50),
+                        .width(50) // TODO: connect to src/bin/key_hint.rs sizing directly
+                        .height(50), // TODO: connect to src/bin/key_hint.rs sizing directly
                 ) {
                     eprintln!("windows::audit_key_hints(..) move window error: {:?}", e);
                 }
@@ -280,13 +280,13 @@ pub fn switch_workspace(state: &mut crate::state::State) {
     crate::ewmh::update_workspace(state);
     crate::ewmh::clear_active(state);
     for i in 0..state.monitors.len() {
-        let real_monitor = state.current_monitor;
-        state.current_monitor = i;
+        let real_monitor = state.current_monitor; // TODO: shouldn't need temp like this
+        state.current_monitor = i; // TODO: shouldn't need temp like this
         if let Some(main) = state.workspace().main_window {
             fill_main_space(state, main);
         }
         layout_side_space(state);
-        state.current_monitor = real_monitor;
+        state.current_monitor = real_monitor; // TODO: shouldn't need temp like this
     }
     crate::windows::focus_main(state);
 }

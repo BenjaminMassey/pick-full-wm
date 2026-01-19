@@ -20,6 +20,8 @@ fn config_parse(
         .map(|s| s.to_owned())
         .collect();
     assert_eq!(pieces.len(), 2);
+    // TODO: assert that pieces are made of numbers
+    // TODO: backup scenarios, rather than asserts
     (
         percent_or_value(&pieces[0], display_width),
         percent_or_value(&pieces[1], display_height),
@@ -44,7 +46,7 @@ fn all_but_last(s: &str) -> String {
 
 fn str_percent(s: &str, denominator: f32) -> i32 {
     ((s.parse::<i32>().unwrap() as f32 / 100f32) * denominator) as i32
-}
+} // TODO: assert that percent between 0 and 100
 
 pub fn update_current_monitor(state: &mut crate::state::State) {
     let reply = match state.conn.query_pointer(state.root) {

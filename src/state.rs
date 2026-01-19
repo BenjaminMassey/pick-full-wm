@@ -157,6 +157,7 @@ impl MonitorInfo {
 pub fn get_monitor_infos(conn: &RustConnection, root: Window) -> Vec<MonitorInfo> {
     let mut monitor_infos: Vec<MonitorInfo> = vec![];
 
+    // TODO: add more graceful logging around monitor errors
     let resources = conn
         .randr_get_screen_resources(root)
         .expect("Failed to get screen resources")
