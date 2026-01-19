@@ -1,6 +1,6 @@
 # pick-full-wm
 
-`pick-full-wm`: an [x11](https://en.wikipedia.org/wiki/X_Window_System) window manager written in [Rust](https://rust-lang.org/) with the [x11 crate](https://crates.io/crates/x11)'s [xlib](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html) bindings.
+`pick-full-wm`: an [x11](https://en.wikipedia.org/wiki/X_Window_System) window manager written in [Rust](https://rust-lang.org/) with the [x11rb crate](https://crates.io/crates/x11rb)'s [xcb](https://xcb.freedesktop.org/) bindings.
 
 The primary workflow is to focus on one nearly full screen window at a time, with the ability to quickly switch to other windows preview-able on the side of the screen.
 
@@ -12,7 +12,7 @@ The name is lightly inspired by [Minecraft](https://www.minecraft.net/en-us)'s [
 
 # Usage
 
-An x11 window manager is built into a single executable, so should work from a standardly built Rust file. Simply put, a `cargo run --release` should build you a working version of `pick-full-wm` at `/your/repo/target/release/pick-full-wm`.
+An x11 window manager is built into a single executable, so should work from a standardly built Rust file. Simply put, a `cargo build --release` should build you a working version of `pick-full-wm` at `/your/repo/target/release/pick-full-wm`.
 
 There two primary ways (that I know of) to launch into `pick-full-wm`.
 
@@ -55,8 +55,10 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [ ] Integration with "cargo deb"
 - [ ] Support for screenshot and capture tools
 
-Some other bigger considerations are switching from unsafe xlib c bindings to proper XCB Rust bindings, and implementing a kind of preview system for side windows (instead of doing true direct changes to the size and position). These are TBD in terms of even desired or not.
+Another bigger consideration is whether to implement a kind of preview system for side windows (instead of doing true direct changes to the size and position): TBD on whether that is desired or not
 
 # Credit
 
-This was written by Benjamin Massey benjamin.w.massey@gmail.com
+This was primarily written by Benjamin Massey benjamin.w.massey@gmail.com
+
+With xlib (x11 crate) => xcb (x11rb crate) conversion help by Bart Massey bart@cs.pdx.edu
