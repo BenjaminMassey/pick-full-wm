@@ -9,7 +9,6 @@ use crate::atoms::Atoms;
 pub struct State {
     pub settings: crate::settings::Settings,
     pub conn: RustConnection,
-    pub screen_num: usize,
     pub root: Window,
     pub atoms: Atoms,
     pub monitors: Vec<Monitor>,
@@ -26,7 +25,6 @@ impl State {
             .expect("Failed to intern atoms")
             .reply()
             .expect("Failed to get atom reply");
-
         let mut monitor_infos = get_monitor_infos(&conn, root);
         monitor_infos.sort_by_key(|m| m.position.0);
         let mut monitors: Vec<Monitor> = vec![];
@@ -39,7 +37,6 @@ impl State {
         Self {
             settings,
             conn,
-            screen_num,
             root,
             atoms,
             monitors,

@@ -1,20 +1,23 @@
+use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
-    Allow, ButtonPressEvent, ClientMessageEvent, ConnectionExt, DestroyNotifyEvent,
-    KeyButMask, KeyReleaseEvent, MapRequestEvent,
+    Allow, ButtonPressEvent, ClientMessageEvent, ConnectionExt, DestroyNotifyEvent, KeyButMask,
+    KeyReleaseEvent, MapRequestEvent,
 };
-use x11rb::CURRENT_TIME;
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if !crate::safety::window_exists(state, event.window) {
-        state
-            .conn
-            .allow_events(Allow::ASYNC_BOTH, CURRENT_TIME)
-            .expect("Failed to allow events");
-        state.conn.flush().expect("Failed to flush");
+        if let Err(e) = state.conn.allow_events(Allow::ASYNC_BOTH, CURRENT_TIME) {
+            eprintln!("events::map_request(..) allow events error: {:?}", e);
+        }
+        if let Err(e) = state.conn.flush() {
+            eprintln!("events::map_request(..) flush error: {:?}", e);
+        }
         return;
     }
-    state.conn.map_window(event.window).expect("Failed to map window");
+    if let Err(e) = state.conn.map_window(event.window) {
+        eprintln!("events::map_request(..) map window error: {:?}", e);
+    }
     if let Some(key) = crate::windows::get_key_hint_window(state, event.window) {
         if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
             *entry = event.window;
@@ -29,7 +32,9 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     }
     if crate::windows::is_help_window(state, event.window) {
         crate::ewmh::set_active(state, event.window);
-        state.conn.flush().expect("Failed to flush");
+        if let Err(e) = state.conn.flush() {
+            eprintln!("events::map_request(..) flush error: {:?}", e);
+        }
         state.mut_workspace().help_window = Some(event.window);
         return;
     }
@@ -47,52 +52,59 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
     if !crate::safety::window_exists(state, event.event)
         || crate::windows::is_excepted_window(state, event.child)
     {
-        state
-            .conn
-            .allow_events(Allow::REPLAY_POINTER, CURRENT_TIME)
-            .expect("Failed to allow events");
-        state.conn.flush().expect("Failed to flush");
+        if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
+            eprintln!("events::button(..) allow events error: {:?}", e);
+        }
+        if let Err(e) = state.conn.flush() {
+            eprintln!("events::button(..) flush error: {:?}", e);
+        }
         return;
     }
     if event.detail == 1 {
         // left click
         if let Some(existing) = state.workspace().main_window {
             if existing == event.child {
-                state
-                    .conn
-                    .allow_events(Allow::REPLAY_POINTER, CURRENT_TIME)
-                    .expect("Failed to allow events");
-                state.conn.flush().expect("Failed to flush");
+                if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
+                    eprintln!("events::button(..) allow events errors: {:?}", e)
+                };
+                if let Err(e) = state.conn.flush() {
+                    eprintln!("events::button(..) flush error: {:?}", e);
+                }
                 return;
             }
             crate::windows::remove_side_window(state, event.child);
             crate::windows::fill_main_space(state, event.child);
             crate::windows::send_side_space(state, existing);
-            state
-                .conn
-                .allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
-                .expect("Failed to allow events");
-            state.conn.flush().expect("Failed to flush");
+            if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
+                eprintln!("events::button(..) allow events error: {:?}", e);
+            }
+            if let Err(e) = state.conn.flush() {
+                eprintln!("events::button(..) flush error: {:?}", e);
+            }
         }
     } else if event.detail == 3 {
         // right click
         if let Some(existing) = state.workspace().main_window
             && existing == event.child
         {
-            state
-                .conn
-                .allow_events(Allow::REPLAY_POINTER, CURRENT_TIME)
-                .expect("Failed to allow events");
-            state.conn.flush().expect("Failed to flush");
+            if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
+                eprintln!("events::button(..) allow events errors: {:?}", e)
+            };
+            if let Err(e) = state.conn.flush() {
+                eprintln!("events::button(..) flush error: {:?}", e);
+            }
             return;
         }
-        state.conn.destroy_window(event.child).expect("Failed to destroy window");
+        if let Err(e) = state.conn.destroy_window(event.child) {
+            eprintln!("events::button(..) destroy window error: {:?}", e);
+        }
         crate::windows::layout_side_space(state);
-        state
-            .conn
-            .allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
-            .expect("Failed to allow events");
-        state.conn.flush().expect("Failed to flush");
+        if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
+            eprintln!("events::button(..) allow events error: {:?}", e);
+        }
+        if let Err(e) = state.conn.flush() {
+            eprintln!("events::button(..) flush error: {:?}", e);
+        }
     }
 }
 
@@ -131,12 +143,15 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     if let Some(close_key) = close_key {
         if keysym == Some(close_key) && mod4_pressed {
             if let Some(main) = state.workspace().main_window {
-                state.conn.destroy_window(main).expect("Failed to destroy window");
-                state
-                    .conn
-                    .allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
-                    .expect("Failed to allow events");
-                state.conn.flush().expect("Failed to flush");
+                if let Err(e) = state.conn.destroy_window(main) {
+                    eprintln!("events::key(..) destroy window error: {:?}", e);
+                }
+                if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
+                    eprintln!("events::key(..) allow events error: {:?}", e);
+                }
+                if let Err(e) = state.conn.flush() {
+                    eprintln!("events::key(..) flush error: {:?}", e);
+                }
             }
         }
     }
@@ -193,23 +208,17 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
             let target = &state.monitors[index];
 
             // Calculate center position, clamping to i16 range to prevent overflow
-            let x = (target.position.0 + (target.sizes.screen.0 as f32 * 0.5) as i32).clamp(-32768, 32767) as i16;
-            let y = (target.position.1 + (target.sizes.screen.1 as f32 * 0.5) as i32).clamp(-32768, 32767) as i16;
+            let x = (target.position.0 + (target.sizes.screen.0 as f32 * 0.5) as i32)
+                .clamp(-32768, 32767) as i16;
+            let y = (target.position.1 + (target.sizes.screen.1 as f32 * 0.5) as i32)
+                .clamp(-32768, 32767) as i16;
 
-            state
-                .conn
-                .warp_pointer(
-                    0u32,
-                    state.root,
-                    0,
-                    0,
-                    0,
-                    0,
-                    x,
-                    y,
-                )
-                .expect("Failed to warp pointer");
-            state.conn.flush().expect("Failed to flush");
+            if let Err(e) = state.conn.warp_pointer(0u32, state.root, 0, 0, 0, 0, x, y) {
+                eprintln!("events::key(..) warp pointer error: {:?}", e);
+            }
+            if let Err(e) = state.conn.flush() {
+                eprintln!("events::key(..) flush error: {:?}", e);
+            }
             state.current_monitor = index;
             crate::windows::focus_main(state);
         }
@@ -225,7 +234,9 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
                 && state.current_workspace == i
             {
                 crate::ewmh::set_active(state, main_window);
-                state.conn.flush().expect("Failed to flush");
+                if let Err(e) = state.conn.flush() {
+                    eprintln!("events::destroy(..) flush error: {:?}", e);
+                }
             }
             state.mut_monitor().workspaces[i].help_window = None;
             return;

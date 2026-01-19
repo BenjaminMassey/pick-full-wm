@@ -1,7 +1,5 @@
 use x11rb::connection::Connection;
-use x11rb::protocol::xproto::{
-    AtomEnum, ConfigureWindowAux, ConnectionExt, StackMode, Window,
-};
+use x11rb::protocol::xproto::{AtomEnum, ConfigureWindowAux, ConnectionExt, StackMode, Window};
 
 pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
     let width =
@@ -11,19 +9,21 @@ pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
             state.monitor().sizes.main.0
         };
 
-    state
-        .conn
-        .configure_window(
-            window,
-            &ConfigureWindowAux::new()
-                .x(state.monitor().position.0)
-                .y(state.monitor().position.1)
-                .width(width as u32)
-                .height(state.monitor().sizes.main.1 as u32),
-        )
-        .expect("Failed to configure main window");
+    if let Err(e) = state.conn.configure_window(
+        window,
+        &ConfigureWindowAux::new()
+            .x(state.monitor().position.0)
+            .y(state.monitor().position.1)
+            .width(width as u32)
+            .height(state.monitor().sizes.main.1 as u32),
+    ) {
+        eprintln!("windows::fill_main_space(..) move window error: {:?}", e);
+    }
 
-    state.conn.flush().expect("Failed to flush");
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::fill_main_space(..) flush error: {:?}", e);
+    }
+
     state.mut_workspace().main_window = Some(window);
     focus_main(state);
 }
@@ -67,20 +67,21 @@ pub fn layout_side_space(state: &mut crate::state::State) {
             );
             positions.push(position);
 
-            state
-                .conn
-                .configure_window(
-                    *window,
-                    &ConfigureWindowAux::new()
-                        .x(position.0)
-                        .y(position.1)
-                        .width(state.monitor().sizes.side.0 as u32)
-                        .height(section_size as u32),
-                )
-                .expect("Failed to configure side window");
+            if let Err(e) = state.conn.configure_window(
+                *window,
+                &ConfigureWindowAux::new()
+                    .x(position.0)
+                    .y(position.1)
+                    .width(state.monitor().sizes.side.0 as u32)
+                    .height(section_size as u32),
+            ) {
+                eprintln!("windows::layout_side_space(..) move window error: {:?}", e);
+            }
         }
     }
-    state.conn.flush().expect("Failed to flush");
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::fill_main_space(..) flush error: {:?}", e);
+    }
     audit_key_hints(state, &positions);
     if let Some(main) = state.workspace().main_window {
         fill_main_space(state, main);
@@ -94,62 +95,60 @@ fn audit_key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
     for (i, k) in state.settings.bindings.swaps.clone().iter().enumerate() {
         if i < positions.len() {
             if state.workspace().key_hint_windows.contains_key(k) {
-                state
-                    .conn
-                    .configure_window(
-                        state.workspace().key_hint_windows[k],
-                        &ConfigureWindowAux::new()
-                            .x(positions[i].0)
-                            .y(positions[i].1)
-                            .width(50)
-                            .height(50),
-                    )
-                    .expect("Failed to configure key hint window");
+                if let Err(e) = state.conn.configure_window(
+                    state.workspace().key_hint_windows[k],
+                    &ConfigureWindowAux::new()
+                        .x(positions[i].0)
+                        .y(positions[i].1)
+                        .width(50)
+                        .height(50),
+                ) {
+                    eprintln!("windows::audit_key_hints(..) move window error: {:?}", e);
+                }
 
-                state
-                    .conn
-                    .configure_window(
-                        state.workspace().key_hint_windows[k],
-                        &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
-                    )
-                    .expect("Failed to raise key hint window");
+                if let Err(e) = state.conn.configure_window(
+                    state.workspace().key_hint_windows[k],
+                    &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+                ) {
+                    eprintln!("windows::audit_key_hints(..) raise window error: {:?}", e);
+                }
 
-                state.conn.flush().expect("Failed to flush");
+                if let Err(e) = state.conn.flush() {
+                    eprintln!("windows::audit_key_hints(..) flush error: {:?}", e);
+                }
             } else {
                 crate::binaries::key_hint(k);
             }
         } else if let Some(key_hint) = state.workspace().key_hint_windows.get(k) {
-            state
-                .conn
-                .destroy_window(*key_hint)
-                .expect("Failed to destroy key hint window");
-            state.conn.flush().expect("Failed to flush");
+            if let Err(e) = state.conn.destroy_window(*key_hint) {
+                eprintln!("windows::audit_key_hints(..) destroy error: {:?}", e);
+            }
+            if let Err(e) = state.conn.flush() {
+                eprintln!("windows::audit_key_hints(..) flush error: {:?}", e);
+            }
             let _ = state.mut_workspace().key_hint_windows.remove(k);
         }
     }
 }
 
 pub fn fullscreen(state: &mut crate::state::State, window: Window) {
-    state
-        .conn
-        .configure_window(
-            window,
-            &ConfigureWindowAux::new()
-                .x(
-                    state.monitor().position.0
-                        + ((state.monitor().sizes.main.0 + state.monitor().sizes.side.0)
-                            - state.monitor().sizes.screen.0),
-                )
-                .y(
-                    state.monitor().position.1
-                        + (state.monitor().sizes.main.1 - state.monitor().sizes.screen.1),
-                )
-                .width(state.monitor().sizes.screen.0 as u32)
-                .height(state.monitor().sizes.screen.1 as u32),
-        )
-        .expect("Failed to fullscreen window");
+    if let Err(e) = state.conn.configure_window(
+        window,
+        &ConfigureWindowAux::new()
+            .x(state.monitor().position.0
+                + ((state.monitor().sizes.main.0 + state.monitor().sizes.side.0)
+                    - state.monitor().sizes.screen.0))
+            .y(state.monitor().position.1
+                + (state.monitor().sizes.main.1 - state.monitor().sizes.screen.1))
+            .width(state.monitor().sizes.screen.0 as u32)
+            .height(state.monitor().sizes.screen.1 as u32),
+    ) {
+        eprintln!("windows::fullscreen(..) move window error: {:?}", e);
+    }
 
-    state.conn.flush().expect("Failed to flush");
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::fullscreen(..) flush error: {:?}", e);
+    }
     focus_main(state);
 }
 
@@ -177,10 +176,7 @@ pub fn is_help_window(state: &mut crate::state::State, window: Window) -> bool {
     false
 }
 
-pub fn get_key_hint_window(
-    state: &mut crate::state::State,
-    window: Window,
-) -> Option<String> {
+pub fn get_key_hint_window(state: &mut crate::state::State, window: Window) -> Option<String> {
     if let Some(name) = get_window_name(state, window)
         && name.contains("key_hint")
     {
@@ -231,39 +227,56 @@ pub fn switch_workspace(state: &mut crate::state::State) {
         for index in 0..monitor.workspaces.len() {
             if index == state.current_workspace {
                 if let Some(main) = monitor.workspaces[index].main_window {
-                    state.conn.map_window(main).expect("Failed to map main window");
+                    if let Err(e) = state.conn.map_window(main) {
+                        eprintln!("windows::switch_workspace(..) map window error: {:?}", e);
+                    }
                 }
                 for window in &monitor.workspaces[index].side_windows {
                     if let Some(window) = window {
-                        state.conn.map_window(*window).expect("Failed to map side window");
+                        if let Err(e) = state.conn.map_window(*window) {
+                            eprintln!("windows::switch_workspace(..) map window error: {:?}", e);
+                        }
                     }
                 }
                 if let Some(help) = monitor.workspaces[index].help_window {
-                    state.conn.map_window(help).expect("Failed to map help window");
+                    if let Err(e) = state.conn.map_window(help) {
+                        eprintln!("windows::switch_workspace(..) map window error: {:?}", e);
+                    }
                 }
                 for (_, window) in &monitor.workspaces[index].key_hint_windows {
-                    state.conn.map_window(*window).expect("Failed to map key hint window");
+                    if let Err(e) = state.conn.map_window(*window) {
+                        eprintln!("windows::switch_workspace(..) map window error: {:?}", e);
+                    }
                 }
             } else {
                 if let Some(main) = monitor.workspaces[index].main_window {
-                    state.conn.unmap_window(main).expect("Failed to unmap main window");
+                    if let Err(e) = state.conn.unmap_window(main) {
+                        eprintln!("windows::switch_workspace(..) unmap window error: {:?}", e);
+                    }
                 }
                 for window in &monitor.workspaces[index].side_windows {
                     if let Some(window) = window {
-                        state.conn.unmap_window(*window).expect("Failed to unmap side window");
+                        if let Err(e) = state.conn.unmap_window(*window) {
+                            eprintln!("windows::switch_workspace(..) unmap window error: {:?}", e);
+                        }
                     }
                 }
                 if let Some(help) = monitor.workspaces[index].help_window {
-                    state.conn.unmap_window(help).expect("Failed to unmap help window");
+                    if let Err(e) = state.conn.unmap_window(help) {
+                        eprintln!("windows::switch_workspace(..) unmap window error: {:?}", e);
+                    }
                 }
                 for (_, window) in &monitor.workspaces[index].key_hint_windows {
-                    state.conn.unmap_window(*window).expect("Failed to unmap key hint window");
+                    if let Err(e) = state.conn.unmap_window(*window) {
+                        eprintln!("windows::switch_workspace(..) unmap window error: {:?}", e);
+                    }
                 }
             }
         }
     }
-    // Flush after all map/unmap operations
-    state.conn.flush().expect("Failed to flush");
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::switch_workspace(..) flush error: {:?}", e);
+    }
     crate::ewmh::update_workspace(state);
     crate::ewmh::clear_active(state);
     for i in 0..state.monitors.len() {
