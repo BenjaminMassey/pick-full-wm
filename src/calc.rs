@@ -68,7 +68,7 @@ pub fn update_current_monitor(state: &mut crate::state::State) {
         {
             if state.current_monitor != i {
                 state.current_monitor = i;
-                crate::windows::focus_main(state);
+                crate::windows::core::focus_main(state);
             }
             break;
         }

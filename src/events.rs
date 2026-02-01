@@ -8,7 +8,7 @@ use x11rb::protocol::xproto::{
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     println!(
         "Map Window: {:?} ({})",
-        crate::windows::get_window_name(state, event.window),
+        crate::windows::gets::window_name(state, event.window),
         event.window,
     );
     if !crate::safety::window_exists(state, event.window) {
@@ -23,7 +23,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if let Err(e) = state.conn.map_window(event.window) {
         eprintln!("events::map_request(..) map window error: {:?}", e);
     }
-    if let Some(key) = crate::windows::get_key_hint_window(state, event.window) {
+    if let Some(key) = crate::windows::gets::key_hint_window(state, event.window) {
         if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
             let old_key = entry.clone();
             *entry = event.window;
@@ -41,10 +41,10 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
                 .key_hint_windows
                 .insert(key, event.window);
         }
-        crate::windows::layout_side_space(state);
+        crate::windows::layout::layout_side_space(state);
         return;
     }
-    if crate::windows::is_help_window(state, event.window) {
+    if crate::windows::checks::is_help_window(state, event.window) {
         crate::ewmh::set_active(state, event.window);
         if let Err(e) = state.conn.flush() {
             eprintln!("events::map_request(..) flush error: {:?}", e);
@@ -52,30 +52,30 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         state.mut_workspace().help_window = Some(event.window);
         return;
     }
-    if crate::windows::is_excepted_window(state, event.window) {
+    if crate::windows::checks::is_excepted_window(state, event.window) {
         return;
     }
-    if crate::windows::is_popup(state, event.window) {
+    if crate::windows::checks::is_popup(state, event.window) {
         state.mut_workspace().floatings.push(event.window);
-        crate::windows::center_window(state, event.window);
+        crate::windows::layout::center_window(state, event.window);
         return;
     }
     if let Some(main) = state.workspace().main_window {
         if state.settings.layout.new_to_main {
-            crate::windows::send_side_space(state, main);
-            crate::windows::fill_main_space(state, event.window);
+            crate::windows::core::send_side_space(state, main);
+            crate::windows::core::fill_main_space(state, event.window);
         } else {
-            crate::windows::send_side_space(state, event.window);
+            crate::windows::core::send_side_space(state, event.window);
         }
     } else {
-        crate::windows::fill_main_space(state, event.window);
+        crate::windows::core::fill_main_space(state, event.window);
     }
 }
 
 pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
     if !crate::safety::window_exists(state, event.child)
-        || crate::windows::is_excepted_window(state, event.child)
-        || crate::windows::is_popup(state, event.child)
+        || crate::windows::checks::is_excepted_window(state, event.child)
+        || crate::windows::checks::is_popup(state, event.child)
     {
         if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
             eprintln!("events::button(..) allow events error: {:?}", e);
@@ -97,9 +97,9 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
                 }
                 return;
             }
-            crate::windows::remove_side_window(state, event.child);
-            crate::windows::fill_main_space(state, event.child);
-            crate::windows::send_side_space(state, existing);
+            crate::windows::core::remove_side_window(state, event.child);
+            crate::windows::core::fill_main_space(state, event.child);
+            crate::windows::core::send_side_space(state, existing);
             if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
                 eprintln!("events::button(..) allow events error: {:?}", e);
             }
@@ -123,7 +123,7 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
         if let Err(e) = state.conn.destroy_window(event.child) {
             eprintln!("events::button(..) destroy window error: {:?}", e);
         }
-        crate::windows::layout_side_space(state);
+        crate::windows::layout::layout_side_space(state);
         if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
             eprintln!("events::button(..) allow events error: {:?}", e);
         }
@@ -141,7 +141,7 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     let launcher_key = crate::keymap::parse_string(&state.settings.bindings.launcher);
     if let Some(launcher_key) = launcher_key {
         if keysym == Some(launcher_key) && mod4_pressed {
-            crate::windows::run_command(&state.settings.applications.launcher);
+            crate::windows::misc::run_command(&state.settings.applications.launcher);
         }
     }
 
@@ -155,10 +155,10 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
                 let target = state.workspace().side_windows[index];
                 if let Some(target) = target {
                     let existing = state.workspace().main_window.clone();
-                    crate::windows::remove_side_window(state, target);
-                    crate::windows::fill_main_space(state, target);
+                    crate::windows::core::remove_side_window(state, target);
+                    crate::windows::core::fill_main_space(state, target);
                     if let Some(existing) = existing {
-                        crate::windows::send_side_space(state, existing);
+                        crate::windows::core::send_side_space(state, existing);
                     }
                 }
             }
@@ -188,9 +188,9 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
             if let Some(main) = state.workspace().main_window {
                 state.mut_workspace().fullscreen = !state.workspace().fullscreen;
                 if state.workspace().fullscreen {
-                    crate::windows::fullscreen(state, main);
+                    crate::windows::layout::fullscreen(state, main);
                 } else {
-                    crate::windows::fill_main_space(state, main);
+                    crate::windows::core::fill_main_space(state, main);
                 }
             }
         }
@@ -206,7 +206,7 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     let term_key = crate::keymap::parse_string(&state.settings.bindings.terminal);
     if let Some(term_key) = term_key {
         if keysym == Some(term_key) && mod4_pressed {
-            crate::windows::run_command(&state.settings.applications.terminal);
+            crate::windows::misc::run_command(&state.settings.applications.terminal);
         }
     }
 
@@ -222,7 +222,7 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
         if let Some(workspace_key) = workspace_key {
             if keysym == Some(workspace_key) && mod4_pressed && state.current_workspace != index {
                 state.current_workspace = index;
-                crate::windows::switch_workspace(state);
+                crate::windows::workspaces::switch(state);
             }
         }
     }
@@ -251,21 +251,21 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
                 if !state.workspace().side_windows.is_empty()
                     && let Some(target) = state.workspace().side_windows[0]
                 {
-                    crate::windows::remove_side_window(state, target);
-                    crate::windows::fill_main_space(state, target);
+                    crate::windows::core::remove_side_window(state, target);
+                    crate::windows::core::fill_main_space(state, target);
                 }
             }
             state.current_monitor = index;
             if move_target.is_some() && shift_pressed {
                 if let Some(main) = state.workspace().main_window {
                     state.mut_workspace().main_window = None;
-                    crate::windows::send_side_space(state, main);
+                    crate::windows::core::send_side_space(state, main);
                 }
                 if let Some(target) = move_target {
-                    crate::windows::fill_main_space(state, target);
+                    crate::windows::core::fill_main_space(state, target);
                 }
             }
-            crate::windows::focus_main(state);
+            crate::windows::core::focus_main(state);
         }
     }
 }
@@ -273,7 +273,7 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
 pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
     println!(
         "Destroy Window: {:?} ({})",
-        crate::windows::get_window_name(state, event.window),
+        crate::windows::gets::window_name(state, event.window),
         event.window,
     );
     for i in 0..state.monitor().workspaces.len() {
@@ -281,8 +281,8 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
             .floatings
             .contains(&event.window)
         {
-            crate::windows::remove_floating(state, event.window);
-            crate::windows::focus_main(state);
+            crate::windows::core::remove_floating(state, event.window);
+            crate::windows::core::focus_main(state);
             return;
         }
         if let Some(help) = state.monitor().workspaces[i].help_window
@@ -307,19 +307,19 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
                     if let Some(target) = state.monitor().workspaces[i].side_windows[0]
                         && state.current_workspace == i
                     {
-                        crate::windows::remove_side_window(state, target);
-                        crate::windows::fill_main_space(state, target);
+                        crate::windows::core::remove_side_window(state, target);
+                        crate::windows::core::fill_main_space(state, target);
                     }
                 } else {
                     state.mut_workspace().main_window = None;
                 }
             } else {
-                crate::windows::remove_side_window(state, event.window);
+                crate::windows::core::remove_side_window(state, event.window);
             }
         }
         state.current_workspace = real_workspace; // TODO: gross, for windows.rs calls
     }
-    crate::windows::layout_side_space(state);
+    crate::windows::layout::layout_side_space(state);
     if state.workspace().main_window.is_none() {
         crate::ewmh::clear_active(state);
     }
@@ -330,10 +330,10 @@ pub fn client_message(state: &mut crate::state::State, event: ClientMessageEvent
         let requested_workspace = event.data.as_data32()[0] as usize;
         if state.current_workspace != requested_workspace {
             state.current_workspace = requested_workspace;
-            crate::windows::switch_workspace(state);
+            crate::windows::workspaces::switch(state);
         }
     } else if event.type_ == state.atoms._NET_ACTIVE_WINDOW {
-        let monitor_index = crate::windows::get_monitor_index(state, event.window);
+        let monitor_index = crate::windows::gets::monitor_index(state, event.window);
         if monitor_index != state.current_monitor {
             state.current_monitor = monitor_index;
         }
@@ -341,9 +341,9 @@ pub fn client_message(state: &mut crate::state::State, event: ClientMessageEvent
             if existing == event.window {
                 return;
             }
-            crate::windows::remove_side_window(state, event.window);
-            crate::windows::fill_main_space(state, event.window);
-            crate::windows::send_side_space(state, existing);
+            crate::windows::core::remove_side_window(state, event.window);
+            crate::windows::core::fill_main_space(state, event.window);
+            crate::windows::core::send_side_space(state, existing);
         }
     }
 }

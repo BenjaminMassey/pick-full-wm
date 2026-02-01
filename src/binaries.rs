@@ -1,14 +1,14 @@
 pub fn help_window() {
     if let Some(dir) = get_pfwm_dir() {
         let path = &format!("{}/help_window", dir);
-        crate::windows::run_command(&path);
+        crate::windows::misc::run_command(&path);
     }
 }
 
 pub fn key_hint(key: &str) {
     if let Some(dir) = get_pfwm_dir() {
         let path = &format!("{}/key_hint \"{}\"", dir, key);
-        crate::windows::run_command(&path);
+        crate::windows::misc::run_command(&path);
     }
 }
 

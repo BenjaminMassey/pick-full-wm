@@ -6,7 +6,7 @@ use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
 pub fn run_startups(state: &mut crate::state::State) {
     for startup in &state.settings.applications.startups {
-        crate::windows::run_command(startup);
+        crate::windows::misc::run_command(startup);
     }
 }
 
