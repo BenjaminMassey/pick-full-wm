@@ -16,7 +16,7 @@ pub struct State {
 impl State {
     pub fn init() -> Self {
         let settings = crate::settings::get_settings();
-        let (conn, screen_num) = crate::setup::connect();
+        let (conn, screen_num) = crate::setup::internal::connect();
         let screen = &conn.setup().roots[screen_num];
         let root = screen.root;
         let atoms = crate::atoms::Atoms::new(&conn)

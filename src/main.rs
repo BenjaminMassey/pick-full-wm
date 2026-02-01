@@ -14,13 +14,13 @@ mod state;
 mod windows;
 
 fn main() {
-    setup::dbus_init();
+    setup::internal::dbus_init();
     let mut state = state::State::init();
-    setup::init_ewmh(&mut state);
-    setup::run_startups(&mut state);
-    setup::mouse_input(&mut state);
-    setup::key_input(&mut state);
-    setup::windows(&mut state);
+    setup::ewmh::init(&mut state);
+    setup::internal::run_startups(&mut state);
+    setup::input::mouse(&mut state);
+    setup::input::keys(&mut state);
+    setup::internal::windows(&mut state);
 
     loop {
         let event = state
