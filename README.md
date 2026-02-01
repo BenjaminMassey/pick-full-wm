@@ -62,3 +62,9 @@ Another bigger consideration is whether to implement a kind of preview system fo
 This was primarily written by Benjamin Massey benjamin.w.massey@gmail.com
 
 With xlib (x11 crate) => xcb (x11rb crate) conversion help by Bart Massey bart@cs.pdx.edu
+
+# License
+
+This project is licensed under the [GNU General Public License (GPLv3)](https://www.gnu.org/licenses/gpl-3.0.en.html).
+
+A copy of said license can be found in `LICENSE.md`.
