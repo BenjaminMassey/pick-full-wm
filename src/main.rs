@@ -31,23 +31,23 @@ fn main() {
         match event {
             Event::MapRequest(e) => {
                 println!("MapRequest event!");
-                events::map_request(&mut state, e);
+                events::window::map_request(&mut state, e);
             }
             Event::ButtonPress(e) => {
                 println!("ButtonPress event!");
-                events::button(&mut state, e);
+                events::input::button(&mut state, e);
             }
             Event::KeyRelease(e) => {
                 println!("KeyRelease event!");
-                events::key(&mut state, e);
+                events::input::key(&mut state, e);
             }
             Event::DestroyNotify(e) => {
                 println!("DestroyNotify event!");
-                events::destroy(&mut state, e);
+                events::window::destroy(&mut state, e);
             }
             Event::ClientMessage(e) => {
                 println!("ClientMessage event!");
-                events::client_message(&mut state, e);
+                events::client::message(&mut state, e);
             }
             _ => {}
         }
