@@ -6,9 +6,9 @@ The primary workflow is to focus on one nearly full screen window at a time, wit
 
 The name is lightly inspired by [Minecraft](https://www.minecraft.net/en-us)'s ["Pick Block"](https://minecraft.fandom.com/wiki/Controls) key-binding that allows the user to instantly switch to any visible block.
 
-# Screenshot
+# Demo
 
-![screenshot](screenshot.png)
+https://github.com/user-attachments/assets/758ea78a-3893-43a3-b48f-3e881a7a093e
 
 # Usage
 
