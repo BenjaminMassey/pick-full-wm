@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Applications {
@@ -16,7 +16,7 @@ pub struct Layout {
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Bindings {
-    pub functions: HashMap<String, String>,
+    pub functions: BTreeMap<String, String>,
     pub swaps: Vec<String>,
     pub close_main: String,
     pub fullscreen: String,
@@ -46,7 +46,7 @@ impl Settings {
                 new_to_main: true,
             },
             bindings: Bindings {
-                functions: HashMap::from([
+                functions: BTreeMap::from([
                     ("d".to_owned(), "rofi -show drun".to_owned()),
                     ("t".to_owned(), "alacritty".to_owned()),
                     ("briu".to_owned(), "brightnessctl set +10%".to_owned()),
