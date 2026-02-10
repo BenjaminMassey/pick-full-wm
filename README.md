@@ -20,7 +20,7 @@ The first is via an appropriate [`.xinitrc` file from a TTY session via the [`st
 
 The second is from a display manager such as [`SDDM`](https://github.com/sddm/sddm), which looks for an appropriate [`.desktop` file](https://wiki.archlinux.org/title/Desktop_entries) in `/usr/share/xsessions/`, and can be loaded from some window manager menu (bottom left in SDDM's interface). An example `pick-full.desktop` is found in the root of this repository.
 
-The next layer is configuring your `settings.toml` file. There is an example in the root of this repository, but `pick-full-wm` will look for it in `~/.config/pick-full-wm/`, so copy it there and start editing. The current defaults are reliant upon [rofi](https://github.com/davatorium/rofi) as an application launcher and [polybar](https://github.com/polybar/polybar) as a status bar, but are used simply and thus should hopefully be easily swappable.
+The next layer is configuring your `settings.toml` file. There is an example in the root of this repository, but `pick-full-wm` will look for it in `~/.config/pick-full-wm/`, so copy it there and start editing. The current defaults use [`rofi`](https://github.com/davatorium/rofi) as an application launcher and [`polybar`](https://github.com/polybar/polybar) as a status bar, plus `brightnessctl` for brightness control and `wpctl` for volume control. These are very much dynamic and change-able, though, of course.
 
 # Features and TODOs
 
@@ -56,6 +56,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [ ] Integration with "cargo deb"
 - [ ] Support for screenshot and capture tools
 - [ ] Extra support for keybind settings (like "X + Y")
+- [ ] Media keys shouldn't need SUPER held
 
 Another bigger consideration is whether to implement a kind of preview system for side windows (instead of doing true direct changes to the size and position): TBD on whether that is desired or not
 

@@ -49,6 +49,20 @@ impl Settings {
                 functions: HashMap::from([
                     ("d".to_owned(), "rofi -show drun".to_owned()),
                     ("t".to_owned(), "alacritty".to_owned()),
+                    ("briu".to_owned(), "brightnessctl set +10%".to_owned()),
+                    ("brid".to_owned(), "brightnessctl set 10%-".to_owned()),
+                    (
+                        "volu".to_owned(),
+                        "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+".to_owned(),
+                    ),
+                    (
+                        "vold".to_owned(),
+                        "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-".to_owned(),
+                    ),
+                    (
+                        "mute".to_owned(),
+                        "wpctl set-mute @DEFAULT_SINK@ toggle".to_owned(),
+                    ),
                 ]),
                 swaps: vec![
                     "j".to_owned(),
