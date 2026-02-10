@@ -2,27 +2,35 @@ use eframe::egui;
 
 use pick_full_wm::settings;
 
-// TODO: make prettier
+const HEADER_SIZE: f32 = 24.0;
+const STANDARD_SIZE: f32 = 16.0;
+const FOOTER_SIZE: f32 = 20.0;
+// TODO: dynamic scaling, probably calling some combo of xrandr scale and res
+
+const BG_COLOR: egui::Color32 = egui::Color32::from_rgb(25, 25, 30);
+const STANDARD_COLOR: egui::Color32 = egui::Color32::from_rgb(200, 200, 200);
+const HEADER_COLOR: egui::Color32 = egui::Color32::from_rgb(255, 255, 255);
+const SUPER_COLOR: egui::Color32 = egui::Color32::from_rgb(255, 255, 0);
+const KEY_COLOR: egui::Color32 = egui::Color32::from_rgb(0, 255, 255);
+const FOOTER_COLOR: egui::Color32 = egui::Color32::from_rgb(255, 255, 255);
 
 fn main() -> eframe::Result {
-    // TODO: dynamic sizing
+    let window = HelpWindow::new();
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([550.0, 375.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([
+            550.0,
+            265.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
+        ]),
         centered: true,
         ..Default::default()
     };
-    eframe::run_native(
-        "pfwm help",
-        options,
-        Box::new(|cc| Ok(Box::new(HelpWindow::new(cc)))),
-    )
+    eframe::run_native("pfwm help", options, Box::new(|_cc| Ok(Box::new(window))))
 }
 struct HelpWindow {
     settings: settings::Settings,
 }
 impl HelpWindow {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_pixels_per_point(1.5);
+    fn new() -> Self {
         Self {
             settings: settings::get_settings(),
         }
@@ -40,48 +48,96 @@ impl eframe::App for HelpWindow {
         }) {
             std::process::exit(0);
         }
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Pick Full WM - Help Menu");
-            ui.label("");
-            ui.label(&format!(
-                "[SUPER] + [{}]: open this help menu",
-                &self.settings.bindings.help.to_uppercase()
-            ));
-            ui.label("[LEFT CLICK]: make side window main");
-            ui.label("[RIGHT CLICK]: kill side window");
-            ui.label(&format!(
-                "[SUPER] + [{}]: close main window",
-                &self.settings.bindings.close_main.to_uppercase()
-            ));
-            ui.label(&format!(
-                "[SUPER] + [{}]: fullscreen main window",
-                &self.settings.bindings.fullscreen.to_uppercase()
-            ));
-            ui.label(&format!(
-                "[SUPER] + [{}]: swap with side",
-                &self.settings.bindings.swaps.join(" / ").to_uppercase()
-            ));
-            ui.label(&format!(
-                "[SUPER] + [{}]: set workspace",
-                &self.settings.bindings.workspaces.join(" / ").to_uppercase()
-            ));
-            ui.label(&format!(
-                "[SUPER] + [{}]: cycle monitor index",
-                &self.settings.bindings.monitor.to_uppercase()
-            ));
-            ui.label(&format!(
-                "[SUPER] + [SHIFT] + [{}]: move to next monitor",
-                &self.settings.bindings.monitor.to_uppercase()
-            ));
-            for (key, command) in &self.settings.bindings.functions {
-                ui.label(&format!(
-                    "[SUPER] + [{}]: \"{}\"",
-                    &key.to_uppercase(),
-                    &command,
-                ));
-            }
-            ui.label("");
-            ui.label("Click anywhere in this window (or tap any key) to close.");
-        });
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(BG_COLOR))
+            .show(ctx, |ui| {
+                ui.label(
+                    egui::RichText::new("Pick Full WM - Help Menu")
+                        .size(HEADER_SIZE)
+                        .strong()
+                        .color(HEADER_COLOR),
+                );
+                ui.label("");
+                super_label(
+                    ui,
+                    &self.settings.bindings.help.to_uppercase(),
+                    "open this help menu",
+                );
+                super_label(ui, "LEFT CLICK", "make side window main");
+                super_label(ui, "RIGHT CLICK", "kill side window");
+                super_label(
+                    ui,
+                    &self.settings.bindings.close_main.to_uppercase(),
+                    "close main window",
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.fullscreen.to_uppercase(),
+                    "fullscreen main window",
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.swaps.join("  ").to_uppercase(),
+                    "swap with side",
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.workspaces.join("  ").to_uppercase(),
+                    "set workspace",
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.monitor.to_uppercase(),
+                    "cycle monitor index",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.monitor.to_uppercase(), KEY_COLOR),
+                        (&format!("]: move to next monitor"), STANDARD_COLOR),
+                    ],
+                );
+                for (key, command) in &self.settings.bindings.functions {
+                    super_label(ui, &key.to_uppercase(), &format!("\"{}\"", command));
+                }
+                ui.label("");
+                ui.label(
+                    egui::RichText::new("Click anywhere in this window (or tap any key) to close.")
+                        .size(FOOTER_SIZE)
+                        .strong()
+                        .color(FOOTER_COLOR),
+                );
+            });
     }
+}
+
+fn super_label(ui: &mut egui::Ui, key: &str, action: &str) {
+    mix_color_label(
+        ui,
+        &vec![
+            ("[", STANDARD_COLOR),
+            ("SUPER", SUPER_COLOR),
+            ("] + [", STANDARD_COLOR),
+            (key, KEY_COLOR),
+            (&format!("]: {}", action), STANDARD_COLOR),
+        ],
+    );
+}
+
+fn mix_color_label(ui: &mut egui::Ui, items: &[(&str, egui::Color32)]) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 0.0;
+        for item in items {
+            ui.label(
+                egui::RichText::new(item.0)
+                    .color(item.1)
+                    .size(STANDARD_SIZE),
+            );
+        }
+    });
 }
