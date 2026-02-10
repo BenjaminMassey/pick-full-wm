@@ -70,10 +70,12 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     let mod4_pressed = event.state.contains(KeyButMask::MOD4);
     let shift_pressed = event.state.contains(KeyButMask::SHIFT);
 
-    let launcher_key = crate::keymap::parse_string(&state.settings.bindings.launcher);
-    if let Some(launcher_key) = launcher_key {
-        if keysym == Some(launcher_key) && mod4_pressed {
-            crate::windows::misc::run_command(&state.settings.applications.launcher);
+    for (key, command) in &state.settings.bindings.functions {
+        let function_key = crate::keymap::parse_string(&key);
+        if let Some(function_key) = function_key {
+            if keysym == Some(function_key) && mod4_pressed {
+                crate::windows::misc::run_command(&command);
+            }
         }
     }
 
@@ -132,13 +134,6 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     if let Some(help_key) = help_key {
         if keysym == Some(help_key) && mod4_pressed {
             crate::binaries::help_window();
-        }
-    }
-
-    let term_key = crate::keymap::parse_string(&state.settings.bindings.terminal);
-    if let Some(term_key) = term_key {
-        if keysym == Some(term_key) && mod4_pressed {
-            crate::windows::misc::run_command(&state.settings.applications.terminal);
         }
     }
 

@@ -50,20 +50,12 @@ impl eframe::App for HelpWindow {
             ui.label("[LEFT CLICK]: make side window main");
             ui.label("[RIGHT CLICK]: kill side window");
             ui.label(&format!(
-                "[SUPER] + [{}]: open application launcher",
-                &self.settings.bindings.launcher.to_uppercase()
-            ));
-            ui.label(&format!(
                 "[SUPER] + [{}]: close main window",
                 &self.settings.bindings.close_main.to_uppercase()
             ));
             ui.label(&format!(
                 "[SUPER] + [{}]: fullscreen main window",
                 &self.settings.bindings.fullscreen.to_uppercase()
-            ));
-            ui.label(&format!(
-                "[SUPER] + [{}]: open a terminal window",
-                &self.settings.bindings.terminal.to_uppercase()
             ));
             ui.label(&format!(
                 "[SUPER] + [{}]: swap with side",
@@ -81,6 +73,13 @@ impl eframe::App for HelpWindow {
                 "[SUPER] + [SHIFT] + [{}]: move to next monitor",
                 &self.settings.bindings.monitor.to_uppercase()
             ));
+            for (key, command) in &self.settings.bindings.functions {
+                ui.label(&format!(
+                    "[SUPER] + [{}]: \"{}\"",
+                    &key.to_uppercase(),
+                    &command,
+                ));
+            }
             ui.label("");
             ui.label("Click anywhere in this window (or tap any key) to close.");
         });

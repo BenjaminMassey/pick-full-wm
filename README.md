@@ -45,6 +45,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Tiling exceptions for pop-up style windows
 - [x] Some implementation of virtual workspaces
 - [x] Set new windows to main space (optional)
+- [x] Dynamic keybinds to run any command
 - [ ] Ability to swap between floating and tiled
 - [ ] Support for monitor rotation
 - [ ] Way to move floating windows
@@ -54,6 +55,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [ ] Wallpaper support
 - [ ] Integration with "cargo deb"
 - [ ] Support for screenshot and capture tools
+- [ ] Extra support for keybind settings (like "X + Y")
 
 Another bigger consideration is whether to implement a kind of preview system for side windows (instead of doing true direct changes to the size and position): TBD on whether that is desired or not
 

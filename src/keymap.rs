@@ -1,13 +1,14 @@
 pub fn get_key_strings(state: &mut crate::state::State) -> Vec<String> {
     let mut keys: Vec<String> = vec![];
-    keys.push(state.settings.bindings.launcher.clone());
+    for (k, _) in &state.settings.bindings.functions {
+        keys.push(k.clone());
+    }
     for k in &state.settings.bindings.swaps {
         keys.push(k.clone());
     }
     keys.push(state.settings.bindings.close_main.clone());
     keys.push(state.settings.bindings.fullscreen.clone());
     keys.push(state.settings.bindings.help.clone());
-    keys.push(state.settings.bindings.terminal.clone());
     for k in &state.settings.bindings.workspaces {
         keys.push(k.clone());
     }

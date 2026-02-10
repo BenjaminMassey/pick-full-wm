@@ -1,9 +1,9 @@
+use std::collections::HashMap;
+
 #[derive(serde::Deserialize, Clone)]
 pub struct Applications {
     pub startups: Vec<String>,
-    pub launcher: String,
     pub excluded: Vec<String>,
-    pub terminal: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -16,13 +16,12 @@ pub struct Layout {
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Bindings {
-    pub launcher: String,
+    pub functions: HashMap<String, String>,
     pub swaps: Vec<String>,
     pub close_main: String,
     pub fullscreen: String,
     pub help: String,
     pub key_hints: bool,
-    pub terminal: String,
     pub workspaces: Vec<String>,
     pub monitor: String,
 }
@@ -38,9 +37,7 @@ impl Settings {
         Self {
             applications: Applications {
                 startups: vec!["polybar".to_owned()],
-                launcher: "rofi -show drun".to_owned(),
                 excluded: vec!["polybar".to_owned(), "rofi".to_owned()],
-                terminal: "alacritty".to_owned(),
             },
             layout: Layout {
                 main_size: vec!["80%x96%".to_owned(), "80%x100%".to_owned()],
@@ -49,7 +46,10 @@ impl Settings {
                 new_to_main: true,
             },
             bindings: Bindings {
-                launcher: "space".to_owned(),
+                functions: HashMap::from([
+                    ("d".to_owned(), "rofi -show drun".to_owned()),
+                    ("t".to_owned(), "alacritty".to_owned()),
+                ]),
                 swaps: vec![
                     "j".to_owned(),
                     "k".to_owned(),
@@ -64,7 +64,6 @@ impl Settings {
                 fullscreen: "f".to_owned(),
                 help: "h".to_owned(),
                 key_hints: true,
-                terminal: "t".to_owned(),
                 workspaces: vec![
                     "1".to_owned(),
                     "2".to_owned(),
