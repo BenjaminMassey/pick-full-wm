@@ -144,6 +144,7 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
             if state.monitors[i].workspaces[state.current_workspace]
                 .main_window
                 .is_some()
+                && !state.monitors[i].workspaces[state.current_workspace].fullscreen
             {
                 if let Err(e) = state.conn.map_window(close_box_window) {
                     eprintln!("windows::place_close_boxes(..) map window error: {:?}", e);
