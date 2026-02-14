@@ -63,8 +63,22 @@ impl eframe::App for HelpWindow {
                     &self.settings.bindings.help.to_uppercase(),
                     "open this help menu",
                 );
-                super_label(ui, "LEFT CLICK", "make side window main");
-                super_label(ui, "RIGHT CLICK", "kill side window");
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("LEFT CLICK", KEY_COLOR),
+                        ("]: make side window main", STANDARD_COLOR),
+                    ],
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("RIGHT CLICK", KEY_COLOR),
+                        ("]: kill side window", STANDARD_COLOR),
+                    ],
+                );
                 super_label(
                     ui,
                     &self.settings.bindings.close_main.to_uppercase(),
