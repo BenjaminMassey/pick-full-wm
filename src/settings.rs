@@ -13,6 +13,7 @@ pub struct Layout {
     pub conditional_full: bool,
     pub new_to_main: bool,
     pub swap_not_stack: bool,
+    pub close_box: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -46,6 +47,7 @@ impl Settings {
                 conditional_full: true,
                 new_to_main: true,
                 swap_not_stack: true,
+                close_box: true,
             },
             bindings: Bindings {
                 functions: BTreeMap::from([

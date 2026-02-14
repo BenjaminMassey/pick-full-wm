@@ -20,8 +20,6 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                 state.monitor().position.0 + state.monitor().sizes.main.0,
                 state.monitor().position.1 + section_pos as i32,
             );
-            positions.push(position);
-
             if let Err(e) = state.conn.configure_window(
                 *window,
                 &ConfigureWindowAux::new()
@@ -32,6 +30,8 @@ pub fn layout_side_space(state: &mut crate::state::State) {
             ) {
                 eprintln!("windows::layout_side_space(..) move window error: {:?}", e);
             }
+            positions.push((position.0 + state.monitor().sizes.side.0 - 60, position.1));
+            // TODO: key hint window width more directly rather than "60"
         }
     }
     if let Err(e) = state.conn.flush() {
@@ -107,5 +107,55 @@ pub fn center_window(state: &mut crate::state::State, window: Window) {
 
     if let Err(e) = state.conn.flush() {
         eprintln!("windows::center_window(..) flush error: {:?}", e);
+    }
+}
+
+pub fn place_close_boxes(state: &mut crate::state::State) {
+    for i in 0..state.monitors.len() {
+        if let Some(close_box_window) = state.monitors[i].close_box.clone() {
+            // position // TODO: real width not hardcoded
+            let x_pos = if !state.settings.layout.conditional_full
+                || !state.monitors[i].workspaces[state.current_workspace]
+                    .side_windows
+                    .is_empty()
+            {
+                state.monitors[i].sizes.main.0
+            } else {
+                state.monitors[i].sizes.screen.0 - 60
+            };
+            if let Err(e) = state.conn.configure_window(
+                close_box_window,
+                &ConfigureWindowAux::new()
+                    .x(x_pos)
+                    .y(state.monitors[i].position.1)
+                    .width(60)
+                    .height(60),
+            ) {
+                eprintln!("windows::place_close_boxes(..) move window error: {:?}", e);
+            }
+            // raise it
+            if let Err(e) = state.conn.configure_window(
+                close_box_window,
+                &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+            ) {
+                eprintln!("windows::place_close_boxes(..) raise window error: {:?}", e);
+            }
+            // existence
+            if state.monitors[i].workspaces[state.current_workspace]
+                .main_window
+                .is_some()
+            {
+                if let Err(e) = state.conn.map_window(close_box_window) {
+                    eprintln!("windows::place_close_boxes(..) map window error: {:?}", e);
+                }
+            } else {
+                if let Err(e) = state.conn.unmap_window(close_box_window) {
+                    eprintln!("windows::place_close_boxes(..) unmap window error: {:?}", e);
+                }
+            }
+        }
+    }
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::place_close_boxes(..) flush error: {:?}", e);
     }
 }

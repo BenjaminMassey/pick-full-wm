@@ -49,6 +49,11 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         state.mut_workspace().help_window = Some(event.window);
         return;
     }
+    if crate::windows::checks::is_close_box(state, event.window) {
+        state.mut_monitor().close_box = Some(event.window);
+        crate::windows::layout::place_close_boxes(state);
+        return;
+    }
     if crate::windows::checks::is_excepted_window(state, event.window) {
         return;
     }
@@ -108,6 +113,8 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
                     {
                         crate::windows::core::remove_side_window(state, target);
                         crate::windows::core::fill_main_space(state, target);
+                    } else {
+                        state.mut_workspace().main_window = None;
                     }
                 } else {
                     state.mut_workspace().main_window = None;
@@ -122,4 +129,5 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
     if state.workspace().main_window.is_none() {
         crate::ewmh::clear_active(state);
     }
+    crate::windows::layout::place_close_boxes(state);
 }

@@ -60,6 +60,7 @@ pub struct Monitor {
     pub sizes: Sizes,
     pub position: (i32, i32),
     pub workspaces: Vec<Workspace>,
+    pub close_box: Option<Window>,
 }
 impl Monitor {
     pub fn new(
@@ -85,6 +86,7 @@ impl Monitor {
             sizes,
             position,
             workspaces,
+            close_box: None,
         }
     }
     pub fn print(&self) {

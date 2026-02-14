@@ -24,6 +24,10 @@ pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
         eprintln!("windows::fill_main_space(..) flush error: {:?}", e);
     }
 
+    if state.settings.layout.close_box && state.monitor().close_box.is_none() {
+        crate::binaries::close_box();
+    }
+
     state.mut_workspace().main_window = Some(window);
     focus_main(state);
 }

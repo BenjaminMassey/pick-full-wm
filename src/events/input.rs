@@ -19,7 +19,29 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
     }
     if event.detail == 1 {
         // left click
-        if let Some(existing) = state.workspace().main_window {
+        if crate::windows::checks::is_close_box(state, event.child) {
+            for index in 0..state.monitors.len() {
+                if let Some(id) = state.monitors[index].close_box
+                    && id == event.child
+                {
+                    if let Some(main) =
+                        state.monitors[index].workspaces[state.current_workspace].main_window
+                    {
+                        if let Err(e) = state.conn.destroy_window(main) {
+                            eprintln!("events::button(..) destroy window error: {:?}", e);
+                        }
+                        if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
+                        {
+                            eprintln!("events::button(..) allow events error: {:?}", e);
+                        }
+                        if let Err(e) = state.conn.flush() {
+                            eprintln!("events::button(..) flush error: {:?}", e);
+                        }
+                    }
+                }
+            }
+            return;
+        } else if let Some(existing) = state.workspace().main_window {
             if existing == event.child {
                 if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
                     eprintln!("events::button(..) allow events errors: {:?}", e)

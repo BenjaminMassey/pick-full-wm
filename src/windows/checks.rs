@@ -25,6 +25,15 @@ pub fn is_help_window(state: &mut crate::state::State, window: Window) -> bool {
     false
 }
 
+pub fn is_close_box(state: &mut crate::state::State, window: Window) -> bool {
+    if let Some(name) = crate::windows::gets::window_name(state, window)
+        && name.contains("pfwm close")
+    {
+        return true;
+    }
+    false
+}
+
 pub fn is_popup(state: &crate::state::State, window: Window) -> bool {
     // Check 1: Override-redirect windows (menus, tooltips)
     if let Ok(attrs) = state.conn.get_window_attributes(window) {

@@ -5,6 +5,13 @@ pub fn help_window() {
     }
 }
 
+pub fn close_box() {
+    if let Some(dir) = get_pfwm_dir() {
+        let path = &format!("{}/close_box", dir);
+        crate::windows::misc::run_command(&path);
+    }
+}
+
 pub fn key_hint(key: &str) {
     if let Some(dir) = get_pfwm_dir() {
         let path = &format!("{}/key_hint \"{}\"", dir, key);

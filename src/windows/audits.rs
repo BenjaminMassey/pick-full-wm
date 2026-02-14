@@ -12,7 +12,9 @@ pub fn key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
                     state.workspace().key_hint_windows[k],
                     &ConfigureWindowAux::new()
                         .x(positions[i].0)
-                        .y(positions[i].1),
+                        .y(positions[i].1)
+                        .width(60)
+                        .height(60), // TODO: not hardcoded size
                 ) {
                     eprintln!("windows::audit_key_hints(..) move window error: {:?}", e);
                 }
@@ -76,5 +78,6 @@ pub fn main_space(state: &mut crate::state::State) {
 pub fn full(state: &mut crate::state::State) {
     crate::windows::audits::main_space(state);
     crate::windows::audits::side_windows(state);
+    crate::windows::layout::place_close_boxes(state);
     crate::ewmh::update_client_list(state);
 }

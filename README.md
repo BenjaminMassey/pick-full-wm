@@ -47,12 +47,12 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Set new windows to main space (optional)
 - [x] Dynamic keybinds to run any command
 - [x] Ability to move main to different workspace
-- [ ] Mouse driven way to move between monitors
+- [x] Mouse-driven way to close main window
+- [ ] Mouse driven way to move across monitors
 - [ ] Ability to swap between floating and tiled
 - [ ] Support for monitor rotation
 - [ ] Way to move floating windows
 - [ ] Logging
-- [ ] Mouse-driven way to close main window
 - [ ] Ability to move windows between monitors
 - [ ] Wallpaper support
 - [ ] Integration with "cargo deb"
