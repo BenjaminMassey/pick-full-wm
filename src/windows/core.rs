@@ -28,22 +28,33 @@ pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
     focus_main(state);
 }
 
-pub fn send_side_space(state: &mut crate::state::State, window: Window) {
+pub fn send_side_space(state: &mut crate::state::State, window: Window, index: Option<usize>) {
     remove_side_window(state, window);
-    state.mut_workspace().side_windows.push(Some(window));
+    if let Some(index) = index {
+        state
+            .mut_workspace()
+            .side_windows
+            .insert(index, Some(window));
+    } else {
+        state.mut_workspace().side_windows.push(Some(window));
+    }
     crate::windows::layout::layout_side_space(state);
 }
 
-pub fn remove_side_window(state: &mut crate::state::State, window: Window) {
+pub fn remove_side_window(state: &mut crate::state::State, window: Window) -> usize {
     let mut removes: Vec<usize> = vec![];
     for (index, side_window) in state.workspace().side_windows.iter().enumerate() {
         if side_window.is_none() || side_window.unwrap() == window {
             removes.push(index);
         }
     }
-    for index in removes {
-        state.mut_workspace().side_windows.remove(index);
+    if removes.is_empty() {
+        return 0; // could do better but eh
     }
+    for index in &removes {
+        state.mut_workspace().side_windows.remove(*index);
+    }
+    removes[removes.len() - 1]
 }
 
 pub fn focus_main(state: &mut crate::state::State) {

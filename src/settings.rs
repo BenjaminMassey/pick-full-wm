@@ -12,6 +12,7 @@ pub struct Layout {
     pub top_left: Vec<String>,
     pub conditional_full: bool,
     pub new_to_main: bool,
+    pub swap_not_stack: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -44,6 +45,7 @@ impl Settings {
                 top_left: vec!["0,4%".to_owned(), "0,0".to_owned()],
                 conditional_full: true,
                 new_to_main: true,
+                swap_not_stack: true,
             },
             bindings: Bindings {
                 functions: BTreeMap::from([

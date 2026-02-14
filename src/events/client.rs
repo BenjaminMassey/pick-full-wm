@@ -16,9 +16,13 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
             if existing == event.window {
                 return;
             }
-            crate::windows::core::remove_side_window(state, event.window);
+            let index = crate::windows::core::remove_side_window(state, event.window);
             crate::windows::core::fill_main_space(state, event.window);
-            crate::windows::core::send_side_space(state, existing);
+            if state.settings.layout.swap_not_stack {
+                crate::windows::core::send_side_space(state, existing, Some(index));
+            } else {
+                crate::windows::core::send_side_space(state, existing, None);
+            }
         }
     }
 }

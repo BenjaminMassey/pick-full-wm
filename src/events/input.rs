@@ -29,9 +29,13 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
                 }
                 return;
             }
-            crate::windows::core::remove_side_window(state, event.child);
+            let index = crate::windows::core::remove_side_window(state, event.child);
             crate::windows::core::fill_main_space(state, event.child);
-            crate::windows::core::send_side_space(state, existing);
+            if state.settings.layout.swap_not_stack {
+                crate::windows::core::send_side_space(state, existing, Some(index));
+            } else {
+                crate::windows::core::send_side_space(state, existing, None);
+            }
             if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
                 eprintln!("events::button(..) allow events error: {:?}", e);
             }
@@ -89,10 +93,14 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
                 let target = state.workspace().side_windows[index];
                 if let Some(target) = target {
                     let existing = state.workspace().main_window.clone();
-                    crate::windows::core::remove_side_window(state, target);
+                    let index = crate::windows::core::remove_side_window(state, target);
                     crate::windows::core::fill_main_space(state, target);
                     if let Some(existing) = existing {
-                        crate::windows::core::send_side_space(state, existing);
+                        if state.settings.layout.swap_not_stack {
+                            crate::windows::core::send_side_space(state, existing, Some(index));
+                        } else {
+                            crate::windows::core::send_side_space(state, existing, None);
+                        }
                     }
                 }
             }
@@ -180,13 +188,14 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
                 {
                     crate::windows::core::remove_side_window(state, target);
                     crate::windows::core::fill_main_space(state, target);
+                    crate::windows::layout::layout_side_space(state);
                 }
             }
             state.current_monitor = index;
             if move_target.is_some() && shift_pressed {
                 if let Some(main) = state.workspace().main_window {
                     state.mut_workspace().main_window = None;
-                    crate::windows::core::send_side_space(state, main);
+                    crate::windows::core::send_side_space(state, main, None);
                 }
                 if let Some(target) = move_target {
                     crate::windows::core::fill_main_space(state, target);
