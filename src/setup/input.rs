@@ -41,8 +41,13 @@ pub fn mouse(state: &mut crate::state::State) {
 
 pub fn keys(state: &mut crate::state::State) {
     std::thread::sleep(std::time::Duration::from_millis(500));
+    let mut shifts: Vec<String> = vec![];
+    shifts.push(state.settings.bindings.monitor.clone());
+    for workspace_key in &state.settings.bindings.workspaces {
+        shifts.push(workspace_key.clone());
+    }
     for k in crate::keymap::get_key_strings(state) {
-        let keysym = crate::keymap::parse_string(&k);
+        let keysym = crate::keymap::parse_string(&k.clone());
         if let Some(keysym) = keysym {
             if let Some(keycode) = keysym_to_keycode(&state.conn, state.root, keysym) {
                 state
@@ -56,31 +61,23 @@ pub fn keys(state: &mut crate::state::State) {
                         GrabMode::ASYNC,
                     )
                     .expect("Failed to grab key");
+                if shifts.contains(&k.clone()) {
+                    state
+                        .conn
+                        .grab_key(
+                            true,
+                            state.root,
+                            ModMask::M4 | ModMask::SHIFT,
+                            keycode,
+                            GrabMode::ASYNC,
+                            GrabMode::ASYNC,
+                        )
+                        .expect("Failed to grab key");
+                }
             }
         } else {
             eprintln!("unknown key in settings: {}", k);
         }
-    }
-    let keysym = crate::keymap::parse_string(&state.settings.bindings.monitor);
-    if let Some(keysym) = keysym {
-        if let Some(keycode) = keysym_to_keycode(&state.conn, state.root, keysym) {
-            state
-                .conn
-                .grab_key(
-                    true,
-                    state.root,
-                    ModMask::M4 | ModMask::SHIFT,
-                    keycode,
-                    GrabMode::ASYNC,
-                    GrabMode::ASYNC,
-                )
-                .expect("Failed to grab key");
-        }
-    } else {
-        eprintln!(
-            "unknown key in settings: {}",
-            &state.settings.bindings.monitor
-        );
     }
 }
 

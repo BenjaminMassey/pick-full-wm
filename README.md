@@ -46,7 +46,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Some implementation of virtual workspaces
 - [x] Set new windows to main space (optional)
 - [x] Dynamic keybinds to run any command
-- [ ] Ability to move main to different workspace
+- [x] Ability to move main to different workspace
 - [ ] Mouse driven way to move between monitors
 - [ ] Ability to swap between floating and tiled
 - [ ] Support for monitor rotation

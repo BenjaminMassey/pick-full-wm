@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            265.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
+            290.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
         ]),
         centered: true,
         ..Default::default()
@@ -99,6 +99,21 @@ impl eframe::App for HelpWindow {
                     &self.settings.bindings.workspaces.join("  ").to_uppercase(),
                     "set workspace",
                 );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (
+                            &self.settings.bindings.workspaces.join("  ").to_uppercase(),
+                            KEY_COLOR,
+                        ),
+                        (&format!("]: move main to workspace"), STANDARD_COLOR),
+                    ],
+                );
                 super_label(
                     ui,
                     &self.settings.bindings.monitor.to_uppercase(),
@@ -113,7 +128,7 @@ impl eframe::App for HelpWindow {
                         ("SHIFT", SUPER_COLOR),
                         ("] + [", STANDARD_COLOR),
                         (&self.settings.bindings.monitor.to_uppercase(), KEY_COLOR),
-                        (&format!("]: move to next monitor"), STANDARD_COLOR),
+                        (&format!("]: move main to next monitor"), STANDARD_COLOR),
                     ],
                 );
                 for (key, command) in &self.settings.bindings.functions {

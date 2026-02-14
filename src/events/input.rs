@@ -156,7 +156,29 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
         let workspace_key = crate::keymap::parse_string(key);
         if let Some(workspace_key) = workspace_key {
             if keysym == Some(workspace_key) && mod4_pressed && state.current_workspace != index {
-                state.current_workspace = index;
+                if shift_pressed {
+                    if let Some(move_target) = state.workspace().main_window.clone() {
+                        if !state.workspace().side_windows.is_empty()
+                            && let Some(new_main) = state.workspace().side_windows[0]
+                        {
+                            crate::windows::core::remove_side_window(state, new_main);
+                            crate::windows::core::fill_main_space(state, new_main);
+                        } else {
+                            state.mut_workspace().main_window = None;
+                        }
+                        let real_current_workspace = state.current_workspace; // TODO: gross temp set
+                        state.current_workspace = index; // TODO: gross temp set
+                        if let Some(move_aside) = state.workspace().main_window.clone() {
+                            crate::windows::core::send_side_space(state, move_aside, None);
+                        }
+                        crate::windows::core::fill_main_space(state, move_target);
+                        state.current_workspace = real_current_workspace; // TODO: gross temp set
+                        crate::windows::core::focus_main(state);
+                        crate::windows::audits::full(state);
+                    }
+                } else {
+                    state.current_workspace = index;
+                }
                 crate::windows::workspaces::switch(state);
             }
         }
