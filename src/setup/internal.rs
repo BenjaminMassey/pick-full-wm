@@ -4,7 +4,15 @@ use x11rb::protocol::xproto::{ChangeWindowAttributesAux, ConnectionExt, EventMas
 use x11rb::rust_connection::RustConnection;
 use x11rb::wrapper::ConnectionExt as WrapperConnectionExt;
 
-pub fn run_startups(state: &mut crate::state::State) {
+pub fn startups(state: &mut crate::state::State) {
+    if state.settings.layout.close_box {
+        for _ in 0..state.monitors.len() {
+            crate::binaries::close_box();
+        }
+    }
+}
+
+pub fn custom_startups(state: &mut crate::state::State) {
     for startup in &state.settings.applications.startups {
         crate::windows::misc::run_command(startup);
     }

@@ -17,10 +17,11 @@ fn main() {
     setup::internal::dbus_init();
     let mut state = state::State::init();
     setup::ewmh::init(&mut state);
-    setup::internal::run_startups(&mut state);
+    setup::internal::custom_startups(&mut state);
     setup::input::mouse(&mut state);
     setup::input::keys(&mut state);
     setup::internal::windows(&mut state);
+    setup::internal::startups(&mut state);
 
     loop {
         let event = state

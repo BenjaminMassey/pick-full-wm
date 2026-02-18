@@ -24,10 +24,6 @@ pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
         eprintln!("windows::fill_main_space(..) flush error: {:?}", e);
     }
 
-    if state.settings.layout.close_box && state.monitor().close_box.is_none() {
-        crate::binaries::close_box();
-    }
-
     state.mut_workspace().main_window = Some(window);
     focus_main(state);
 }
@@ -71,6 +67,7 @@ pub fn focus_main(state: &mut crate::state::State) {
     if let Err(e) = state.conn.flush() {
         eprintln!("windows::focus_main(..) flush error: {:?}", e);
     }
+    crate::windows::layout::place_close_boxes(state);
 }
 
 pub fn remove_floating(state: &mut crate::state::State, window: Window) {

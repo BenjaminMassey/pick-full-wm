@@ -41,6 +41,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
     if let Some(main) = state.workspace().main_window {
         crate::windows::core::fill_main_space(state, main);
     }
+    crate::windows::layout::place_close_boxes(state);
 }
 
 pub fn fullscreen(state: &mut crate::state::State, window: Window) {
@@ -111,6 +112,9 @@ pub fn center_window(state: &mut crate::state::State, window: Window) {
 }
 
 pub fn place_close_boxes(state: &mut crate::state::State) {
+    if !state.settings.layout.close_box {
+        return;
+    }
     for i in 0..state.monitors.len() {
         if let Some(close_box_window) = state.monitors[i].close_box.clone() {
             // position // TODO: real width not hardcoded
@@ -119,9 +123,9 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
                     .side_windows
                     .is_empty()
             {
-                state.monitors[i].sizes.main.0
+                state.monitors[i].position.0 + state.monitors[i].sizes.main.0
             } else {
-                state.monitors[i].sizes.screen.0 - 60
+                state.monitors[i].position.0 + state.monitors[i].sizes.screen.0 - 60
             };
             if let Err(e) = state.conn.configure_window(
                 close_box_window,
@@ -134,25 +138,13 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
                 eprintln!("windows::place_close_boxes(..) move window error: {:?}", e);
             }
             // raise it
-            if let Err(e) = state.conn.configure_window(
-                close_box_window,
-                &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
-            ) {
-                eprintln!("windows::place_close_boxes(..) raise window error: {:?}", e);
-            }
-            // existence
-            if state.monitors[i].workspaces[state.current_workspace]
-                .main_window
-                .is_some()
-                && !state.monitors[i].workspaces[state.current_workspace].fullscreen
+            if !state.monitors[i].workspaces[state.current_workspace].fullscreen
+                && let Err(e) = state.conn.configure_window(
+                    close_box_window,
+                    &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+                )
             {
-                if let Err(e) = state.conn.map_window(close_box_window) {
-                    eprintln!("windows::place_close_boxes(..) map window error: {:?}", e);
-                }
-            } else {
-                if let Err(e) = state.conn.unmap_window(close_box_window) {
-                    eprintln!("windows::place_close_boxes(..) unmap window error: {:?}", e);
-                }
+                eprintln!("windows::place_close_boxes(..) raise window error: {:?}", e);
             }
         }
     }

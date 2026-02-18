@@ -78,6 +78,5 @@ pub fn main_space(state: &mut crate::state::State) {
 pub fn full(state: &mut crate::state::State) {
     crate::windows::audits::main_space(state);
     crate::windows::audits::side_windows(state);
-    crate::windows::layout::place_close_boxes(state);
     crate::ewmh::update_client_list(state);
 }

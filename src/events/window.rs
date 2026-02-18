@@ -50,7 +50,13 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         return;
     }
     if crate::windows::checks::is_close_box(state, event.window) {
-        state.mut_monitor().close_box = Some(event.window);
+        for i in 0..state.monitors.len() {
+            if state.monitors[i].close_box.is_none() {
+                println!("connecting close box {} to monitor {}", event.window, i);
+                state.monitors[i].close_box = Some(event.window);
+                break;
+            }
+        }
         crate::windows::layout::place_close_boxes(state);
         return;
     }
@@ -72,6 +78,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     } else {
         crate::windows::core::fill_main_space(state, event.window);
     }
+    crate::windows::layout::place_close_boxes(state);
 }
 
 pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {

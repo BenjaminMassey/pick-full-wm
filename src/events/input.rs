@@ -37,10 +37,10 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
                         if let Err(e) = state.conn.flush() {
                             eprintln!("events::button(..) flush error: {:?}", e);
                         }
+                        break;
                     }
                 }
             }
-            return;
         } else if let Some(existing) = state.workspace().main_window {
             if existing == event.child {
                 if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
@@ -88,6 +88,12 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
         if let Err(e) = state.conn.flush() {
             eprintln!("events::button(..) flush error: {:?}", e);
         }
+    }
+    if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
+        eprintln!("events::button(..) allow events error: {:?}", e);
+    }
+    if let Err(e) = state.conn.flush() {
+        eprintln!("events::button(..) flush error: {:?}", e);
     }
 }
 

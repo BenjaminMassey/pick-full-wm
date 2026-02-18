@@ -51,6 +51,7 @@ impl eframe::App for HelpWindow {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(BG_COLOR))
             .show(ctx, |ui| {
+                ui.style_mut().interaction.selectable_labels = false;
                 ui.label(
                     egui::RichText::new("Pick Full WM - Help Menu")
                         .size(HEADER_SIZE)
