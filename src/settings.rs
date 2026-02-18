@@ -53,6 +53,7 @@ impl Settings {
                 functions: BTreeMap::from([
                     ("d".to_owned(), "rofi -show drun".to_owned()),
                     ("t".to_owned(), "alacritty".to_owned()),
+                    ("b".to_owned(), "firefox-esr".to_owned()),
                     ("briu".to_owned(), "brightnessctl set +10%".to_owned()),
                     ("brid".to_owned(), "brightnessctl set 10%-".to_owned()),
                     (
@@ -97,13 +98,21 @@ impl Settings {
 pub fn get_settings() -> Settings {
     let file = shellexpand::tilde("~/.config/pick-full-wm/settings.toml").to_string();
     let path = std::path::Path::new(&file);
-    if path.exists()
-        && let Ok(text) = std::fs::read_to_string(path)
-        && let Ok(settings) = toml::from_str(&text)
-    {
-        return settings;
+    if path.exists() {
+        if let Ok(text) = std::fs::read_to_string(path) {
+            if let Ok(settings) = toml::from_str(&text) {
+                println!("settings file loaded.");
+                return settings;
+            } else {
+                println!("settings toml error");
+            }
+        } else {
+            println!("settings read failure");
+        }
+    } else {
+        println!("settings path failure");
     }
-    eprintln!(
+    println!(
         "Failed to load settings file from \"{}\": using defaults.",
         &file,
     );

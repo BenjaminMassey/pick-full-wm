@@ -20,7 +20,9 @@ The first is via an appropriate [`.xinitrc` file from a TTY session via the [`st
 
 The second is from a display manager such as [`SDDM`](https://github.com/sddm/sddm), which looks for an appropriate [`.desktop` file](https://wiki.archlinux.org/title/Desktop_entries) in `/usr/share/xsessions/`, and can be loaded from some window manager menu (bottom left in SDDM's interface). An example `pick-full.desktop` is found in the root of this repository.
 
-The next layer is configuring your `settings.toml` file. There is an example in the root of this repository, but `pick-full-wm` will look for it in `~/.config/pick-full-wm/`, so copy it there and start editing. The current defaults use [`rofi`](https://github.com/davatorium/rofi) as an application launcher and [`polybar`](https://github.com/polybar/polybar) as a status bar, plus `brightnessctl` for brightness control and `wpctl` for volume control. These are very much dynamic and change-able, though, of course.
+The next layer is configuring your `settings.toml` file. There is are two examples in the root of this repository: `setting-mouse.toml` and `setting-keyboard.toml`. Choose your preferred starter, copy it as "settings.toml" into `~/.config/pick-full-wm/`, and start editing as desired.
+
+The current mouse defaults use [`xfce4-panel`](https://packages.debian.org/trixie/xfce4-panel) for both launcher and status bar. The current keyboard defaults use [`rofi`](https://github.com/davatorium/rofi) as an application launcher and [`polybar`](https://github.com/polybar/polybar) as a status bar. Both use `brightnessctl` for brightness control and `wpctl` for volume control. These are very much dynamic and change-able, though, of course: just startup and exclude clarifications.
 
 # Features and TODOs
 
@@ -48,6 +50,7 @@ The next layer is configuring your `settings.toml` file. There is an example in 
 - [x] Dynamic keybinds to run any command
 - [x] Ability to move main to different workspace
 - [x] Mouse-driven way to close main window
+- [ ] Support for xfce4-panel move workspace messages
 - [ ] Mouse driven way to move across monitors
 - [ ] Ability to swap between floating and tiled
 - [ ] Support for monitor rotation
