@@ -50,7 +50,7 @@ The current mouse defaults use [`xfce4-panel`](https://packages.debian.org/trixi
 - [x] Dynamic keybinds to run any command
 - [x] Ability to move main to different workspace
 - [x] Mouse-driven way to close main window
-- [ ] Support for xfce4-panel move workspace messages
+- [x] Support for close and move-workspace client messages
 - [ ] Mouse driven way to move across monitors
 - [ ] Ability to swap between floating and tiled
 - [ ] Support for monitor rotation

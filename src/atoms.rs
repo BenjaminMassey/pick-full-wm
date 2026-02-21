@@ -20,6 +20,7 @@ atom_manager! {
         _NET_WM_WINDOW_TYPE_POPUP_MENU,
         _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
         _NET_WM_WINDOW_TYPE_TOOLTIP,
+        _NET_CLOSE_WINDOW,
         UTF8_STRING,
         WM_NAME,
     }
