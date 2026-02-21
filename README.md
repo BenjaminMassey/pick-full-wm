@@ -51,19 +51,21 @@ The current mouse defaults use [`xfce4-panel`](https://packages.debian.org/trixi
 - [x] Ability to move main to different workspace
 - [x] Mouse-driven way to close main window
 - [x] Support for close and move-workspace client messages
-- [ ] Mouse driven way to move across monitors
-- [ ] Ability to swap between floating and tiled
-- [ ] Support for monitor rotation
-- [ ] Way to move floating windows
+- [x] Ability to move windows between monitors
+- [x] Mouse driven way to move across monitors
 - [ ] Logging
-- [ ] Ability to move windows between monitors
-- [ ] Wallpaper support
+- [ ] Support for monitor rotation
+- [ ] Way to move floating (pop-up) windows
 - [ ] Integration with "cargo deb"
 - [ ] Support for screenshot and capture tools
 - [ ] Extra support for keybind settings (like "X + Y")
 - [ ] Media keys shouldn't need SUPER held
 
-Another bigger consideration is whether to implement a kind of preview system for side windows (instead of doing true direct changes to the size and position): TBD on whether that is desired or not
+There are some other bigger considerations that would be core to the intent of the system, and thus are not simply written as TODOs. Some of these are:
+- Some concept of side-by-side windows
+- Side windows being rendered previews rather than actual resizes
+- Functionality to swap between handled and floating (like Niri)
+- Wayland support
 
 # Credit
 
