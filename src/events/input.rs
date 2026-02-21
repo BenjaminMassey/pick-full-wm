@@ -41,6 +41,32 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
                     }
                 }
             }
+        } else if crate::windows::checks::is_monitor_box(state, event.child) {
+            for index in 0..state.monitors.len() {
+                if let Some(id) = state.monitors[index].monitor_box
+                    && id == event.child
+                {
+                    let target_monitor = (state.current_monitor + 1) % state.monitors.len();
+                    if let Some(move_target) = state.workspace().main_window.clone() {
+                        state.mut_workspace().main_window = None;
+                        if !state.workspace().side_windows.is_empty()
+                            && let Some(target) = state.workspace().side_windows[0]
+                        {
+                            crate::windows::core::remove_side_window(state, target);
+                            crate::windows::core::fill_main_space(state, target);
+                            crate::windows::layout::layout_side_space(state);
+                        }
+                        let current_monitor = state.current_monitor;
+                        state.current_monitor = target_monitor;
+                        if let Some(main) = state.workspace().main_window {
+                            state.mut_workspace().main_window = None;
+                            crate::windows::core::send_side_space(state, main, None);
+                        }
+                        crate::windows::core::fill_main_space(state, move_target);
+                        state.current_monitor = current_monitor;
+                    }
+                }
+            }
         } else if let Some(existing) = state.workspace().main_window {
             if existing == event.child {
                 if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {

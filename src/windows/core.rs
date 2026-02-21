@@ -68,6 +68,7 @@ pub fn focus_main(state: &mut crate::state::State) {
         eprintln!("windows::focus_main(..) flush error: {:?}", e);
     }
     crate::windows::layout::place_close_boxes(state);
+    crate::windows::layout::place_monitor_boxes(state);
 }
 
 pub fn remove_floating(state: &mut crate::state::State, window: Window) {

@@ -14,6 +14,7 @@ pub struct Layout {
     pub new_to_main: bool,
     pub swap_not_stack: bool,
     pub close_box: bool,
+    pub monitor_box: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -48,6 +49,7 @@ impl Settings {
                 new_to_main: true,
                 swap_not_stack: true,
                 close_box: true,
+                monitor_box: true,
             },
             bindings: Bindings {
                 functions: BTreeMap::from([

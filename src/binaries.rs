@@ -12,6 +12,13 @@ pub fn close_box() {
     }
 }
 
+pub fn monitor_box() {
+    if let Some(dir) = get_pfwm_dir() {
+        let path = &format!("{}/monitor_box", dir);
+        crate::windows::misc::run_command(&path);
+    }
+}
+
 pub fn key_hint(key: &str) {
     if let Some(dir) = get_pfwm_dir() {
         let path = &format!("{}/key_hint \"{}\"", dir, key);

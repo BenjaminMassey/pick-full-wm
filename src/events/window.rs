@@ -60,6 +60,17 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         crate::windows::layout::place_close_boxes(state);
         return;
     }
+    if crate::windows::checks::is_monitor_box(state, event.window) {
+        for i in 0..state.monitors.len() {
+            if state.monitors[i].monitor_box.is_none() {
+                println!("connecting monitor box {} to monitor {}", event.window, i);
+                state.monitors[i].monitor_box = Some(event.window);
+                break;
+            }
+        }
+        crate::windows::layout::place_monitor_boxes(state);
+        return;
+    }
     if crate::windows::checks::is_excepted_window(state, event.window) {
         return;
     }
@@ -79,6 +90,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         crate::windows::core::fill_main_space(state, event.window);
     }
     crate::windows::layout::place_close_boxes(state);
+    crate::windows::layout::place_monitor_boxes(state);
 }
 
 pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
@@ -137,4 +149,5 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
         crate::ewmh::clear_active(state);
     }
     crate::windows::layout::place_close_boxes(state);
+    crate::windows::layout::place_monitor_boxes(state);
 }

@@ -42,6 +42,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
         crate::windows::core::fill_main_space(state, main);
     }
     crate::windows::layout::place_close_boxes(state);
+    crate::windows::layout::place_monitor_boxes(state);
 }
 
 pub fn fullscreen(state: &mut crate::state::State, window: Window) {
@@ -150,5 +151,58 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
     }
     if let Err(e) = state.conn.flush() {
         eprintln!("windows::place_close_boxes(..) flush error: {:?}", e);
+    }
+}
+
+pub fn place_monitor_boxes(state: &mut crate::state::State) {
+    if !state.settings.layout.monitor_box {
+        return;
+    }
+    for i in 0..state.monitors.len() {
+        if let Some(monitor_box_window) = state.monitors[i].monitor_box.clone() {
+            // position // TODO: real width not hardcoded
+            let x_pos = if !state.settings.layout.conditional_full
+                || !state.monitors[i].workspaces[state.current_workspace]
+                    .side_windows
+                    .is_empty()
+            {
+                state.monitors[i].position.0 + state.monitors[i].sizes.main.0
+            } else {
+                state.monitors[i].position.0 + state.monitors[i].sizes.screen.0 - 60
+            };
+            let y_pos = if state.settings.layout.close_box {
+                state.monitors[i].position.1 + 60
+            } else {
+                state.monitors[i].position.1
+            };
+            if let Err(e) = state.conn.configure_window(
+                monitor_box_window,
+                &ConfigureWindowAux::new()
+                    .x(x_pos)
+                    .y(y_pos)
+                    .width(60)
+                    .height(60),
+            ) {
+                eprintln!(
+                    "windows::place_monitor_boxes(..) move window error: {:?}",
+                    e
+                );
+            }
+            // raise it
+            if !state.monitors[i].workspaces[state.current_workspace].fullscreen
+                && let Err(e) = state.conn.configure_window(
+                    monitor_box_window,
+                    &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+                )
+            {
+                eprintln!(
+                    "windows::place_monitor_boxes(..) raise window error: {:?}",
+                    e
+                );
+            }
+        }
+    }
+    if let Err(e) = state.conn.flush() {
+        eprintln!("windows::place_monitor_boxes(..) flush error: {:?}", e);
     }
 }
