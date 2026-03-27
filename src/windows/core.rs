@@ -27,6 +27,7 @@ pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
 
     state.mut_workspace().main_window = Some(window);
     focus_main(state);
+    state.all_windows.insert(window);
 }
 
 pub fn send_side_space(state: &mut crate::state::State, window: Window, index: Option<usize>) {
@@ -39,6 +40,7 @@ pub fn send_side_space(state: &mut crate::state::State, window: Window, index: O
     } else {
         state.mut_workspace().side_windows.push(Some(window));
     }
+    state.all_windows.insert(window);
     crate::windows::layout::layout_side_space(state);
 }
 

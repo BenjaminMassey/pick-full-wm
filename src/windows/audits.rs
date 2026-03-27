@@ -79,4 +79,5 @@ pub fn full(state: &mut crate::state::State) {
     crate::windows::audits::main_space(state);
     crate::windows::audits::side_windows(state);
     crate::ewmh::update_client_list(state);
+    crate::ewmh::desktop_assignments(state);
 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use x11rb::connection::Connection;
 use x11rb::protocol::randr::{self, ConnectionExt as RandrConnectionExt};
 use x11rb::protocol::xproto::Window;
@@ -12,6 +12,7 @@ pub struct State {
     pub monitors: Vec<Monitor>,
     pub current_monitor: usize,
     pub current_workspace: usize,
+    pub all_windows: HashSet<Window>,
 }
 impl State {
     pub fn init() -> Self {
@@ -40,6 +41,7 @@ impl State {
             monitors,
             current_monitor: 0,
             current_workspace: 0,
+            all_windows: HashSet::new(),
         }
     }
     pub fn monitor(&self) -> &Monitor {

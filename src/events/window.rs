@@ -3,12 +3,21 @@ use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{Allow, ConnectionExt, DestroyNotifyEvent, MapRequestEvent};
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
+    if state.all_windows.contains(&event.window) {
+        log::warn!(
+            "Skipping remap of handled window \"{:?}\" ({}).",
+            crate::windows::gets::window_name(state, event.window),
+            event.window
+        );
+        return;
+    }
     log::info!(
         "Map Window: {:?} ({})",
         crate::windows::gets::window_name(state, event.window),
         event.window,
     );
     if !crate::safety::window_exists(state, event.window) {
+        log::error!("Map request for non-existent window {}.", event.window);
         if let Err(e) = state.conn.allow_events(Allow::ASYNC_BOTH, CURRENT_TIME) {
             log::error!("events::map_request(..) allow events error: {:?}", e);
         }
@@ -99,6 +108,7 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
         crate::windows::gets::window_name(state, event.window),
         event.window,
     );
+    state.all_windows.remove(&event.window);
     for i in 0..state.monitor().workspaces.len() {
         if state.monitor().workspaces[i]
             .floatings
