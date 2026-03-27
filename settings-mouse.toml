@@ -30,3 +30,6 @@ brid = "brightnessctl set 10%-"
 volu = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
 vold = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
 mute = "wpctl set-mute @DEFAULT_SINK@ toggle"
+
+[files]
+log_directory = "~/.local/share/pick-full-wm/logs"

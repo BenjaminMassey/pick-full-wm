@@ -34,8 +34,8 @@ pub fn dbus_init() {
             .arg("--exit-with-session")
             .spawn()
         {
-            Ok(_) => println!("Successfully launched dbus-launch"),
-            Err(e) => eprintln!("Warning: Failed to launch dbus-launch: {}", e),
+            Ok(_) => log::info!("Successfully launched dbus-launch"),
+            Err(e) => log::error!("Warning: Failed to launch dbus-launch: {}", e),
         }
     }
 }
@@ -80,4 +80,21 @@ pub fn connect() -> (RustConnection, usize) {
     conn.sync().expect("Failed to sync");
 
     (conn, screen_num)
+}
+
+pub fn logging(state: &crate::state::State) {
+    let dir_str = shellexpand::tilde(&state.settings.files.log_directory).to_string();
+    let dir_path = std::path::Path::new(&dir_str);
+    if !dir_path.exists() {
+        let _ = std::fs::create_dir_all(dir_path);
+    }
+    let time: chrono::DateTime<chrono::offset::Local> = chrono::offset::Local::now();
+    let time_str = time.format("%Y_%m_%d-%H_%M_%S").to_string();
+    let log_path = format!("{}/{}.log", dir_path.to_str().unwrap(), time_str);
+    let _ = simplelog::WriteLogger::init(
+        simplelog::LevelFilter::max(),
+        simplelog::Config::default(),
+        std::fs::File::create(&log_path).unwrap(),
+    );
+    log::info!("Logging initialized at path \"{}\".", &log_path);
 }

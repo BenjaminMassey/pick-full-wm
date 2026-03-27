@@ -30,10 +30,16 @@ pub struct Bindings {
 }
 
 #[derive(serde::Deserialize, Clone)]
+pub struct Files {
+    pub log_directory: String,
+}
+
+#[derive(serde::Deserialize, Clone)]
 pub struct Settings {
     pub applications: Applications,
     pub layout: Layout,
     pub bindings: Bindings,
+    pub files: Files,
 }
 impl Settings {
     fn default() -> Self {
@@ -92,6 +98,9 @@ impl Settings {
                     "4".to_owned(),
                 ],
                 monitor: "tab".to_owned(),
+            },
+            files: Files {
+                log_directory: "~/.local/share/pick-full-wm/logs".to_owned(),
             },
         }
     }

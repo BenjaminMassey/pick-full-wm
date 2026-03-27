@@ -16,18 +16,18 @@ pub fn key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
                         .width(60)
                         .height(60), // TODO: not hardcoded size
                 ) {
-                    eprintln!("windows::audit_key_hints(..) move window error: {:?}", e);
+                    log::error!("windows::audit_key_hints(..) move window error: {:?}", e);
                 }
 
                 if let Err(e) = state.conn.configure_window(
                     state.workspace().key_hint_windows[k],
                     &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
                 ) {
-                    eprintln!("windows::audit_key_hints(..) raise window error: {:?}", e);
+                    log::error!("windows::audit_key_hints(..) raise window error: {:?}", e);
                 }
 
                 if let Err(e) = state.conn.flush() {
-                    eprintln!("windows::audit_key_hints(..) flush error: {:?}", e);
+                    log::error!("windows::audit_key_hints(..) flush error: {:?}", e);
                 }
             } else {
                 state.mut_workspace().key_hint_windows.insert(k.clone(), 0); // TODO: this is silly
@@ -35,10 +35,10 @@ pub fn key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
             }
         } else if let Some(key_hint) = state.workspace().key_hint_windows.get(k) {
             if let Err(e) = state.conn.destroy_window(*key_hint) {
-                eprintln!("windows::audit_key_hints(..) destroy error: {:?}", e);
+                log::error!("windows::audit_key_hints(..) destroy error: {:?}", e);
             }
             if let Err(e) = state.conn.flush() {
-                eprintln!("windows::audit_key_hints(..) flush error: {:?}", e);
+                log::error!("windows::audit_key_hints(..) flush error: {:?}", e);
             }
             let _ = state.mut_workspace().key_hint_windows.remove(k);
         }

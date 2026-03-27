@@ -16,13 +16,15 @@ An x11 window manager is built into a single executable, so should work from a s
 
 There two primary ways (that I know of) to launch into `pick-full-wm`.
 
-The first is via an appropriate [`.xinitrc` file from a TTY session via the [`startx`](https://manpages.debian.org/buster/xinit/startx.1.en.html): it should be placed directly at your user folder (`~` / `/home/username/`). An example `.xinitrc` is found in the root of this repository.
+The first is via an appropriate `.xinitrc` file from a TTY session via the [`startx`](https://manpages.debian.org/buster/xinit/startx.1.en.html) command: it should be placed directly at your user folder (`~` / `/home/username/`). An example `.xinitrc` is found in the root of this repository.
 
 The second is from a display manager such as [`SDDM`](https://github.com/sddm/sddm), which looks for an appropriate [`.desktop` file](https://wiki.archlinux.org/title/Desktop_entries) in `/usr/share/xsessions/`, and can be loaded from some window manager menu (bottom left in SDDM's interface). An example `pick-full.desktop` is found in the root of this repository.
 
 The next layer is configuring your `settings.toml` file. There is are two examples in the root of this repository: `setting-mouse.toml` and `setting-keyboard.toml`. Choose your preferred starter, copy it as "settings.toml" into `~/.config/pick-full-wm/`, and start editing as desired.
 
 The current mouse defaults use [`xfce4-panel`](https://packages.debian.org/trixie/xfce4-panel) for both launcher and status bar. The current keyboard defaults use [`rofi`](https://github.com/davatorium/rofi) as an application launcher and [`polybar`](https://github.com/polybar/polybar) as a status bar. Both use `brightnessctl` for brightness control and `wpctl` for volume control. These are very much dynamic and change-able, though, of course: just startup and exclude clarifications.
+
+By default, both settings place their log files in `~/.local/share/pick-full-wm/logs/`. A new log file is placed here upon every startup of the window manager: named along the lines of `DATE-TIME.log`.
 
 # Features and TODOs
 
@@ -53,7 +55,7 @@ The current mouse defaults use [`xfce4-panel`](https://packages.debian.org/trixi
 - [x] Support for close and move-workspace client messages
 - [x] Ability to move windows between monitors
 - [x] Mouse driven way to move across monitors
-- [ ] Logging
+- [x] Logging of basic functionality
 - [ ] Support for monitor rotation
 - [ ] Way to move floating (pop-up) windows
 - [ ] Integration with "cargo deb"

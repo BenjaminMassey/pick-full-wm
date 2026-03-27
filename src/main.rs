@@ -14,14 +14,16 @@ mod state;
 mod windows;
 
 fn main() {
-    setup::internal::dbus_init();
     let mut state = state::State::init();
+    setup::internal::logging(&state);
+    setup::internal::dbus_init();
     setup::ewmh::init(&mut state);
     setup::internal::custom_startups(&mut state);
     setup::input::mouse(&mut state);
     setup::input::keys(&mut state);
     setup::internal::windows(&mut state);
     setup::internal::startups(&mut state);
+    log::info!("Finished with initialization.");
 
     loop {
         let event = state
@@ -31,23 +33,18 @@ fn main() {
         calc::update_current_monitor(&mut state);
         match event {
             Event::MapRequest(e) => {
-                println!("MapRequest event!");
                 events::window::map_request(&mut state, e);
             }
             Event::ButtonPress(e) => {
-                println!("ButtonPress event!");
                 events::input::button(&mut state, e);
             }
             Event::KeyRelease(e) => {
-                println!("KeyRelease event!");
                 events::input::key(&mut state, e);
             }
             Event::DestroyNotify(e) => {
-                println!("DestroyNotify event!");
                 events::window::destroy(&mut state, e);
             }
             Event::ClientMessage(e) => {
-                println!("ClientMessage event!");
                 events::client::message(&mut state, e);
             }
             _ => {}

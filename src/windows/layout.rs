@@ -8,7 +8,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
     for (index, window) in state.workspace().side_windows.iter().enumerate() {
         if let Some(window) = window {
             let section_pos = section_size * index as f32;
-            println!(
+            log::info!(
                 "layout_side_space {} {},{} {}x{}",
                 window,
                 state.monitor().sizes.main.0,
@@ -28,14 +28,14 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                     .width(state.monitor().sizes.side.0 as u32) // TODO: take into account x offset
                     .height(section_size as u32),
             ) {
-                eprintln!("windows::layout_side_space(..) move window error: {:?}", e);
+                log::error!("windows::layout_side_space(..) move window error: {:?}", e);
             }
             positions.push((position.0 + state.monitor().sizes.side.0 - 60, position.1));
             // TODO: key hint window width more directly rather than "60"
         }
     }
     if let Err(e) = state.conn.flush() {
-        eprintln!("windows::fill_main_space(..) flush error: {:?}", e);
+        log::error!("windows::fill_main_space(..) flush error: {:?}", e);
     }
     crate::windows::audits::key_hints(state, &positions);
     if let Some(main) = state.workspace().main_window {
@@ -46,6 +46,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
 }
 
 pub fn fullscreen(state: &mut crate::state::State, window: Window) {
+    log::info!("Fullscreen toggled.");
     if let Err(e) = state.conn.configure_window(
         window,
         &ConfigureWindowAux::new()
@@ -57,11 +58,11 @@ pub fn fullscreen(state: &mut crate::state::State, window: Window) {
             .width(state.monitor().sizes.screen.0 as u32)
             .height(state.monitor().sizes.screen.1 as u32),
     ) {
-        eprintln!("windows::fullscreen(..) move window error: {:?}", e);
+        log::error!("windows::fullscreen(..) move window error: {:?}", e);
     }
 
     if let Err(e) = state.conn.flush() {
-        eprintln!("windows::fullscreen(..) flush error: {:?}", e);
+        log::error!("windows::fullscreen(..) flush error: {:?}", e);
     }
     crate::windows::core::focus_main(state);
 }
@@ -73,14 +74,14 @@ pub fn reapply_float_windows(state: &mut crate::state::State) {
                 window,
                 &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
             ) {
-                eprintln!(
+                log::error!(
                     "windows::reapply_float_windows(..) raise window error: {:?}",
                     e
                 );
             }
 
             if let Err(e) = state.conn.flush() {
-                eprintln!("windows::reapply_float_windows(..) flush error: {:?}", e);
+                log::error!("windows::reapply_float_windows(..) flush error: {:?}", e);
             }
         } else {
             crate::windows::core::remove_floating(state, window);
@@ -103,12 +104,12 @@ pub fn center_window(state: &mut crate::state::State, window: Window) {
                     + ((state.monitor().sizes.screen.1 - geometry.height as i32) as f32 / 2f32)
                         as i32),
         ) {
-            eprintln!("windows::center_window(..) move window error: {:?}", e);
+            log::error!("windows::center_window(..) move window error: {:?}", e);
         }
     }
 
     if let Err(e) = state.conn.flush() {
-        eprintln!("windows::center_window(..) flush error: {:?}", e);
+        log::error!("windows::center_window(..) flush error: {:?}", e);
     }
 }
 
@@ -136,7 +137,7 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
                     .width(60)
                     .height(60),
             ) {
-                eprintln!("windows::place_close_boxes(..) move window error: {:?}", e);
+                log::error!("windows::place_close_boxes(..) move window error: {:?}", e);
             }
             // raise it
             if !state.monitors[i].workspaces[state.current_workspace].fullscreen
@@ -145,12 +146,12 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
                     &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
                 )
             {
-                eprintln!("windows::place_close_boxes(..) raise window error: {:?}", e);
+                log::error!("windows::place_close_boxes(..) raise window error: {:?}", e);
             }
         }
     }
     if let Err(e) = state.conn.flush() {
-        eprintln!("windows::place_close_boxes(..) flush error: {:?}", e);
+        log::error!("windows::place_close_boxes(..) flush error: {:?}", e);
     }
 }
 
@@ -183,7 +184,7 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
                     .width(60)
                     .height(60),
             ) {
-                eprintln!(
+                log::error!(
                     "windows::place_monitor_boxes(..) move window error: {:?}",
                     e
                 );
@@ -195,7 +196,7 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
                     &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
                 )
             {
-                eprintln!(
+                log::error!(
                     "windows::place_monitor_boxes(..) raise window error: {:?}",
                     e
                 );
@@ -203,6 +204,6 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
         }
     }
     if let Err(e) = state.conn.flush() {
-        eprintln!("windows::place_monitor_boxes(..) flush error: {:?}", e);
+        log::error!("windows::place_monitor_boxes(..) flush error: {:?}", e);
     }
 }

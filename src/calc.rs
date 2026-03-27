@@ -67,6 +67,7 @@ pub fn update_current_monitor(state: &mut crate::state::State) {
             && root_y < monitor.position.1 + monitor.sizes.screen.1
         {
             if state.current_monitor != i {
+                log::info!("Updated monitor index to {}.", i);
                 state.current_monitor = i;
                 crate::windows::core::focus_main(state);
             }

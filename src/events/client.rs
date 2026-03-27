@@ -31,10 +31,10 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
     } else if event.type_ == state.atoms._NET_CLOSE_WINDOW {
         // Request to close a window (from panel, pager, etc.)
         if let Err(e) = state.conn.destroy_window(event.window) {
-            eprintln!("events::client::message(..) destroy window error: {:?}", e);
+            log::error!("events::client::message(..) destroy window error: {:?}", e);
         }
         if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
-            eprintln!("events::client::message(..) allow events error: {:?}", e);
+            log::error!("events::client::message(..) allow events error: {:?}", e);
         }
     } else if event.type_ == state.atoms._NET_WM_DESKTOP {
         // Move window to a specific workspace
@@ -59,6 +59,6 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
         crate::windows::workspaces::switch(state);
     } else {
         // Unknown client message type
-        println!("Unhandled ClientMessage type: {:?}", event.type_);
+        log::info!("Unhandled ClientMessage type: {:?}", event.type_);
     }
 }

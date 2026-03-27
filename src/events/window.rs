@@ -3,22 +3,22 @@ use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{Allow, ConnectionExt, DestroyNotifyEvent, MapRequestEvent};
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
-    println!(
+    log::info!(
         "Map Window: {:?} ({})",
         crate::windows::gets::window_name(state, event.window),
         event.window,
     );
     if !crate::safety::window_exists(state, event.window) {
         if let Err(e) = state.conn.allow_events(Allow::ASYNC_BOTH, CURRENT_TIME) {
-            eprintln!("events::map_request(..) allow events error: {:?}", e);
+            log::error!("events::map_request(..) allow events error: {:?}", e);
         }
         if let Err(e) = state.conn.flush() {
-            eprintln!("events::map_request(..) flush error: {:?}", e);
+            log::error!("events::map_request(..) flush error: {:?}", e);
         }
         return;
     }
     if let Err(e) = state.conn.map_window(event.window) {
-        eprintln!("events::map_request(..) map window error: {:?}", e);
+        log::error!("events::map_request(..) map window error: {:?}", e);
     }
     if let Some(key) = crate::windows::gets::key_hint_window(state, event.window) {
         if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
@@ -26,10 +26,10 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
             *entry = event.window;
             if old_key != event.window && crate::safety::window_exists(state, old_key) {
                 if let Err(e) = state.conn.destroy_window(old_key) {
-                    eprintln!("events::map_request(..) destroy window error: {:?}", e);
+                    log::error!("events::map_request(..) destroy window error: {:?}", e);
                 }
                 if let Err(e) = state.conn.flush() {
-                    eprintln!("events::map_request(..) flush error: {:?}", e);
+                    log::error!("events::map_request(..) flush error: {:?}", e);
                 }
             }
         } else {
@@ -44,7 +44,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if crate::windows::checks::is_help_window(state, event.window) {
         crate::ewmh::set_active(state, event.window);
         if let Err(e) = state.conn.flush() {
-            eprintln!("events::map_request(..) flush error: {:?}", e);
+            log::error!("events::map_request(..) flush error: {:?}", e);
         }
         state.mut_workspace().help_window = Some(event.window);
         return;
@@ -52,7 +52,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if crate::windows::checks::is_close_box(state, event.window) {
         for i in 0..state.monitors.len() {
             if state.monitors[i].close_box.is_none() {
-                println!("connecting close box {} to monitor {}", event.window, i);
+                log::info!("connecting close box {} to monitor {}", event.window, i);
                 state.monitors[i].close_box = Some(event.window);
                 break;
             }
@@ -63,7 +63,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if crate::windows::checks::is_monitor_box(state, event.window) {
         for i in 0..state.monitors.len() {
             if state.monitors[i].monitor_box.is_none() {
-                println!("connecting monitor box {} to monitor {}", event.window, i);
+                log::info!("connecting monitor box {} to monitor {}", event.window, i);
                 state.monitors[i].monitor_box = Some(event.window);
                 break;
             }
@@ -94,7 +94,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
 }
 
 pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
-    println!(
+    log::info!(
         "Destroy Window: {:?} ({})",
         crate::windows::gets::window_name(state, event.window),
         event.window,
@@ -116,7 +116,7 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
             {
                 crate::ewmh::set_active(state, main_window);
                 if let Err(e) = state.conn.flush() {
-                    eprintln!("events::destroy(..) flush error: {:?}", e);
+                    log::error!("events::destroy(..) flush error: {:?}", e);
                 }
             }
             state.mut_monitor().workspaces[i].help_window = None;

@@ -2,6 +2,7 @@ use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{ConfigureWindowAux, ConnectionExt, Window};
 
 pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
+    log::info!("fill_main_space {}", window);
     let width =
         if state.settings.layout.conditional_full && state.workspace().side_windows.is_empty() {
             state.monitor().sizes.screen.0
@@ -17,11 +18,11 @@ pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
             .width(width as u32)
             .height(state.monitor().sizes.main.1 as u32),
     ) {
-        eprintln!("windows::fill_main_space(..) move window error: {:?}", e);
+        log::error!("windows::fill_main_space(..) move window error: {:?}", e);
     }
 
     if let Err(e) = state.conn.flush() {
-        eprintln!("windows::fill_main_space(..) flush error: {:?}", e);
+        log::error!("windows::fill_main_space(..) flush error: {:?}", e);
     }
 
     state.mut_workspace().main_window = Some(window);
@@ -65,7 +66,7 @@ pub fn focus_main(state: &mut crate::state::State) {
         crate::windows::layout::reapply_float_windows(state);
     }
     if let Err(e) = state.conn.flush() {
-        eprintln!("windows::focus_main(..) flush error: {:?}", e);
+        log::error!("windows::focus_main(..) flush error: {:?}", e);
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);

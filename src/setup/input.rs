@@ -76,7 +76,7 @@ pub fn keys(state: &mut crate::state::State) {
                 }
             }
         } else {
-            eprintln!("unknown key in settings: {}", k);
+            log::error!("unknown key in settings: {}", k);
         }
     }
 }

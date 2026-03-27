@@ -13,7 +13,7 @@ pub fn set_active(state: &mut crate::state::State, window: Window) {
         AtomEnum::WINDOW,
         &[window],
     ) {
-        eprintln!(
+        log::error!(
             "ewmh::set_active(..) change property NET_ACTIVE_WINDOW error: {:?}",
             e
         );
@@ -24,19 +24,19 @@ pub fn set_active(state: &mut crate::state::State, window: Window) {
             .conn
             .set_input_focus(InputFocus::POINTER_ROOT, window, CURRENT_TIME)
         {
-            eprintln!("ewmh::set_active(..) set input focus error: {:?}", e);
+            log::error!("ewmh::set_active(..) set input focus error: {:?}", e);
         }
 
         if let Err(e) = state.conn.configure_window(
             window,
             &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
         ) {
-            eprintln!("ewmh::set_active(..) configure window stack error: {:?}", e);
+            log::error!("ewmh::set_active(..) configure window stack error: {:?}", e);
         }
     }
 
     if let Err(e) = state.conn.flush() {
-        eprintln!("ewmh::set_active(..) flush error: {:?}", e);
+        log::error!("ewmh::set_active(..) flush error: {:?}", e);
     }
 }
 
@@ -52,14 +52,14 @@ pub fn update_workspace(state: &crate::state::State) {
         AtomEnum::CARDINAL,
         &[state.current_workspace as u32],
     ) {
-        eprintln!(
+        log::error!(
             "ewmh::update_workspace(..) change property NET_CURRENT_DESKTOP error: {:?}",
             e
         );
     }
 
     if let Err(e) = state.conn.flush() {
-        eprintln!("ewmh::update_workspace(..) flush error: {:?}", e);
+        log::error!("ewmh::update_workspace(..) flush error: {:?}", e);
     }
 }
 
@@ -102,7 +102,7 @@ pub fn update_client_list(state: &crate::state::State) {
         AtomEnum::WINDOW,
         &all_windows,
     ) {
-        eprintln!(
+        log::error!(
             "ewmh::update_client_list(..) change property NET_CLIENT_LIST error: {:?}",
             e
         );
@@ -115,14 +115,14 @@ pub fn update_client_list(state: &crate::state::State) {
         AtomEnum::WINDOW,
         &all_windows,
     ) {
-        eprintln!(
+        log::error!(
             "ewmh::update_client_list(..) change property NET_CLIENT_LIST_STACKING error: {:?}",
             e
         );
     }
 
     if let Err(e) = state.conn.flush() {
-        eprintln!("ewmh::update_client_list(..) flush error: {:?}", e);
+        log::error!("ewmh::update_client_list(..) flush error: {:?}", e);
     }
 }
 
@@ -134,13 +134,13 @@ pub fn set_window_desktop(state: &crate::state::State, window: Window, desktop: 
         AtomEnum::CARDINAL,
         &[desktop as u32],
     ) {
-        eprintln!(
+        log::error!(
             "ewmh::set_window_desktop(..) change property NET_WM_DESKTOP error: {:?}",
             e
         );
     }
 
     if let Err(e) = state.conn.flush() {
-        eprintln!("ewmh::set_window_desktop(..) flush error: {:?}", e);
+        log::error!("ewmh::set_window_desktop(..) flush error: {:?}", e);
     }
 }

@@ -32,6 +32,6 @@ fn get_pfwm_dir() -> Option<String> {
             return Some(dir.to_str()?.to_owned());
         }
     }
-    eprintln!("failed to get pfwm dir");
+    log::error!("Failed to get internal pfwm path for binaries.");
     None
 }

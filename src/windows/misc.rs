@@ -4,7 +4,7 @@ pub fn run_command(command: &str) {
         .arg(command)
         .spawn()
     {
-        Ok(_) => println!("Run command: \"{}\"", command),
-        Err(e) => eprintln!("Failed to run command \"{}\": {}", command, e),
+        Ok(_) => log::info!("Ran command: \"{}\"", command),
+        Err(e) => log::error!("Failed to run command \"{}\": {}", command, e),
     };
 }
