@@ -61,8 +61,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                 size.0,
                 size.1,
             );
-            hint_positions.push((position.0 + state.monitor().sizes.side.0 - 60, position.1));
-            // TODO: key hint window width more directly rather than "60"
+            hint_positions.push(position);
         }
     }
     if let Err(e) = state.conn.flush() {
