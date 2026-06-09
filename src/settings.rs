@@ -10,6 +10,7 @@ pub struct Applications {
 pub struct Layout {
     pub main_size: Vec<String>,
     pub top_left: Vec<String>,
+    pub side_orientation: String,
     pub conditional_full: bool,
     pub new_to_main: bool,
     pub swap_not_stack: bool,
@@ -51,6 +52,7 @@ impl Settings {
             layout: Layout {
                 main_size: vec!["80%x96%".to_owned(), "80%x100%".to_owned()],
                 top_left: vec!["0,4%".to_owned(), "0,0".to_owned()],
+                side_orientation: "left".to_owned(),
                 conditional_full: true,
                 new_to_main: true,
                 swap_not_stack: true,

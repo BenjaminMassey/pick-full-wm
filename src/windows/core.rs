@@ -3,17 +3,44 @@ use x11rb::protocol::xproto::{ConfigureWindowAux, ConnectionExt, Window};
 
 pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
     log::info!("fill_main_space {}", window);
-    let width =
-        if state.settings.layout.conditional_full && state.workspace().side_windows.is_empty() {
+    let side = &state.settings.layout.side_orientation;
+    let fill = state.settings.layout.conditional_full;
+    let width = if side == "both" {
+        if fill {
+            if state.workspace().side_windows.is_empty() {
+                state.monitor().sizes.screen.0
+            } else if state.workspace().side_windows.len() == 1 {
+                state.monitor().sizes.main.0
+                    + (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
+            } else {
+                state.monitor().sizes.main.0
+            }
+        } else {
+            state.monitor().sizes.main.0 // - state.monitor().sizes.side.0
+        }
+    } else {
+        if fill && state.workspace().side_windows.is_empty() {
             state.monitor().sizes.screen.0
         } else {
             state.monitor().sizes.main.0
-        };
+        }
+    };
 
     if let Err(e) = state.conn.configure_window(
         window,
         &ConfigureWindowAux::new()
-            .x(state.monitor().position.0)
+            .x(
+                if side == "right" || (fill && state.workspace().side_windows.is_empty()) {
+                    state.monitor().position.0
+                } else {
+                    if side == "both" {
+                        state.monitor().position.0
+                            + (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
+                    } else {
+                        state.monitor().sizes.side.0 + state.monitor().position.0
+                    }
+                },
+            )
             .y(state.monitor().position.1)
             .width(width as u32)
             .height(state.monitor().sizes.main.1 as u32),

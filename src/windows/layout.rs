@@ -2,42 +2,73 @@ use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{ConfigureWindowAux, ConnectionExt, StackMode, Window};
 
 pub fn layout_side_space(state: &mut crate::state::State) {
-    let mut positions: Vec<(i32, i32)> = vec![];
-    let section_size =
-        state.monitor().sizes.side.1 as f32 / state.workspace().side_windows.len() as f32;
-    for (index, window) in state.workspace().side_windows.iter().enumerate() {
+    let mut hint_positions: Vec<(i32, i32)> = vec![]; // TODO: I hate this
+    let side_orientation = &state.settings.layout.side_orientation;
+    let true_side_count = state.workspace().side_windows.len();
+    for (true_index, window) in state.workspace().side_windows.iter().enumerate() {
+        let is_left_side = (true_index % 2) == 0;
+        let side_count = if side_orientation == "both" {
+            let half = state.workspace().side_windows.len() as f32 * 0.5f32;
+            if is_left_side {
+                half.ceil() as usize
+            } else {
+                half.floor() as usize
+            }
+        } else {
+            true_side_count
+        };
+        let side_height = (state.monitor().sizes.side.1 as f32) / (side_count as f32);
+        let index = if side_orientation == "both" {
+            let half = true_index as f32 * 0.5f32;
+            if is_left_side {
+                half.ceil() as usize
+            } else {
+                half.floor() as usize
+            }
+        } else {
+            true_index
+        };
         if let Some(window) = window {
-            let section_pos = section_size * index as f32;
-            log::info!(
-                "layout_side_space {} {},{} {}x{}",
-                window,
-                state.monitor().sizes.main.0,
-                section_pos as i32,
-                state.monitor().sizes.side.0 as u32,
-                section_size as u32,
+            let size = (
+                (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as u32,
+                side_height as u32,
             );
             let position = (
-                state.monitor().position.0 + state.monitor().sizes.main.0,
-                state.monitor().position.1 + section_pos as i32,
+                if (side_orientation == "both" && is_left_side) || side_orientation == "left" {
+                    state.monitor().position.0
+                } else {
+                    state.monitor().position.0
+                        + state.monitor().sizes.main.0
+                        + (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
+                },
+                state.monitor().position.1 + (size.1 as f32 * index as f32) as i32,
             );
             if let Err(e) = state.conn.configure_window(
                 *window,
                 &ConfigureWindowAux::new()
                     .x(position.0)
                     .y(position.1)
-                    .width(state.monitor().sizes.side.0 as u32) // TODO: take into account x offset
-                    .height(section_size as u32),
+                    .width(size.0) // TODO: take into account x offset
+                    .height(size.1),
             ) {
                 log::error!("windows::layout_side_space(..) move window error: {:?}", e);
             }
-            positions.push((position.0 + state.monitor().sizes.side.0 - 60, position.1));
+            log::info!(
+                "layout_side_space {} {},{} {}x{}",
+                window,
+                position.0,
+                position.1,
+                size.0,
+                size.1,
+            );
+            hint_positions.push((position.0 + state.monitor().sizes.side.0 - 60, position.1));
             // TODO: key hint window width more directly rather than "60"
         }
     }
     if let Err(e) = state.conn.flush() {
         log::error!("windows::fill_main_space(..) flush error: {:?}", e);
     }
-    crate::windows::audits::key_hints(state, &positions);
+    crate::windows::audits::key_hints(state, &hint_positions);
     if let Some(main) = state.workspace().main_window {
         crate::windows::core::fill_main_space(state, main);
     }
