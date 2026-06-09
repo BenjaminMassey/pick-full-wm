@@ -30,7 +30,11 @@ pub fn layout_side_space(state: &mut crate::state::State) {
         };
         if let Some(window) = window {
             let size = (
-                (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as u32,
+                if side_orientation == "both" {
+                    (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as u32
+                } else {
+                    state.monitor().sizes.side.0 as u32
+                },
                 side_height as u32,
             );
             let position = (
@@ -39,7 +43,11 @@ pub fn layout_side_space(state: &mut crate::state::State) {
                 } else {
                     state.monitor().position.0
                         + state.monitor().sizes.main.0
-                        + (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
+                        + if side_orientation == "both" {
+                            (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
+                        } else {
+                            0
+                        }
                 },
                 state.monitor().position.1 + (size.1 as f32 * index as f32) as i32,
             );

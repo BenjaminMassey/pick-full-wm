@@ -7,7 +7,7 @@ excluded = [ "xfce" ]
 [layout]
 main_size = [ "80%x97%", "80%x100%" ] # define per monitor
 top_left = [ "0,3%", "0,0" ] # define per monitor
-side_orientation = "left" # left / right / both
+side_orientation = "right" # left / right / both
 conditional_full = true # fill side if none
 new_to_main = true # new windows fill main area, rather than send to side
 swap_not_stack = true # main should replace chosen side, not go to bottom

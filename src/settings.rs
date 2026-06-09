@@ -52,7 +52,7 @@ impl Settings {
             layout: Layout {
                 main_size: vec!["80%x96%".to_owned(), "80%x100%".to_owned()],
                 top_left: vec!["0,4%".to_owned(), "0,0".to_owned()],
-                side_orientation: "left".to_owned(),
+                side_orientation: "right".to_owned(),
                 conditional_full: true,
                 new_to_main: true,
                 swap_not_stack: true,
