@@ -30,6 +30,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         log::error!("events::map_request(..) map window error: {:?}", e);
     }
     if let Some(key) = crate::windows::gets::key_hint_window(state, event.window) {
+        log::info!("Window {} should be a key hint window.", event.window);
         if let Some(entry) = state.mut_workspace().key_hint_windows.get_mut(&key) {
             let old_key = entry.clone();
             *entry = event.window;
@@ -51,6 +52,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         return;
     }
     if crate::windows::checks::is_help_window(state, event.window) {
+        log::info!("Window {} should be a help window.", event.window);
         crate::ewmh::set_active(state, event.window);
         if let Err(e) = state.conn.flush() {
             log::error!("events::map_request(..) flush error: {:?}", e);
@@ -59,6 +61,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         return;
     }
     if crate::windows::checks::is_close_box(state, event.window) {
+        log::info!("Window {} should be a close box.", event.window);
         for i in 0..state.monitors.len() {
             if state.monitors[i].close_box.is_none() {
                 log::info!("connecting close box {} to monitor {}", event.window, i);
@@ -70,6 +73,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         return;
     }
     if crate::windows::checks::is_monitor_box(state, event.window) {
+        log::info!("Window {} should be a monitor box.", event.window);
         for i in 0..state.monitors.len() {
             if state.monitors[i].monitor_box.is_none() {
                 log::info!("connecting monitor box {} to monitor {}", event.window, i);
@@ -84,6 +88,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         return;
     }
     if crate::windows::checks::is_popup(state, event.window) {
+        log::info!("Window {} should be a popup.", event.window);
         state.mut_workspace().floatings.push(event.window);
         crate::windows::layout::center_window(state, event.window);
         return;

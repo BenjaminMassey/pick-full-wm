@@ -4,11 +4,17 @@ pub fn is_excepted_window(state: &mut crate::state::State, window: Window) -> bo
     if is_help_window(state, window)
         || crate::windows::gets::key_hint_window(state, window).is_some()
     {
+        log::warn!("Reached rare state: should have already passed special checks.");
         return true;
     }
     if let Some(name) = crate::windows::gets::window_name(state, window) {
         for exception in &state.settings.applications.excluded {
             if name.contains(exception) {
+                log::info!(
+                    "Window \"{}\" was excepted for match with \"{}\".",
+                    name,
+                    exception,
+                );
                 return true;
             }
         }
