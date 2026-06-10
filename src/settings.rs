@@ -22,6 +22,7 @@ pub struct Layout {
 pub struct Bindings {
     pub functions: BTreeMap<String, String>,
     pub swaps: Vec<String>,
+    pub super_for_clicks: bool,
     pub close_main: String,
     pub fullscreen: String,
     pub help: String,
@@ -89,6 +90,7 @@ impl Settings {
                     "o".to_owned(),
                     "p".to_owned(),
                 ],
+                super_for_clicks: false,
                 close_main: "q".to_owned(),
                 fullscreen: "f".to_owned(),
                 help: "h".to_owned(),

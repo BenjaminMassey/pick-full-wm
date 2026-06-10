@@ -5,6 +5,8 @@ use x11rb::protocol::xproto::{
 };
 
 pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
+    let is_picking =
+        event.state.contains(KeyButMask::MOD4) || !state.settings.bindings.super_for_clicks;
     if !crate::safety::window_exists(state, event.child)
         || crate::windows::checks::is_excepted_window(state, event.child)
         || crate::windows::checks::is_popup(state, event.child)
@@ -70,7 +72,7 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
                 }
             }
         } else if let Some(existing) = state.workspace().main_window {
-            if existing == event.child {
+            if !is_picking || existing == event.child {
                 if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
                     log::error!("events::button(..) allow events errors: {:?}", e)
                 };
@@ -96,9 +98,11 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
         }
     } else if event.detail == 3 {
         // right click
-        if let Some(existing) = state.workspace().main_window
-            && existing == event.child
-        {
+        let is_main = state
+            .workspace()
+            .main_window
+            .is_some_and(|w| w == event.child);
+        if !is_picking || is_main {
             if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
                 log::error!("events::button(..) allow events errors: {:?}", e)
             };
