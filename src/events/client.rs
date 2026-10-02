@@ -7,6 +7,13 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
     if event.type_ == state.atoms._NET_CURRENT_DESKTOP {
         // Switch to workspace
         let requested_workspace = event.data.as_data32()[0] as usize;
+        if requested_workspace >= state.monitor().workspaces.len() {
+            log::warn!(
+                "Ignored request for invalid workspace #{}.",
+                requested_workspace
+            );
+            return;
+        }
         if state.current_workspace != requested_workspace {
             state.current_workspace = requested_workspace;
             crate::windows::workspaces::switch(state);
@@ -57,6 +64,15 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
     } else if event.type_ == state.atoms._NET_WM_DESKTOP {
         // Move window to a specific workspace
         let target_workspace = event.data.as_data32()[0] as usize;
+        if target_workspace >= state.monitor().workspaces.len() {
+            // also covers 0xFFFFFFFF ("all desktops"), which isn't supported
+            log::warn!(
+                "Ignored move of window {} to invalid workspace #{}.",
+                event.window,
+                target_workspace
+            );
+            return;
+        }
         if !state.workspace().side_windows.is_empty()
             && let Some(new_main) = state.workspace().side_windows[0]
         {
