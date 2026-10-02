@@ -32,7 +32,7 @@ struct HelpWindow {
 impl HelpWindow {
     fn new() -> Self {
         Self {
-            settings: settings::get_settings(),
+            settings: settings::load_settings().0,
         }
     }
 }

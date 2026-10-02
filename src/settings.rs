@@ -1,12 +1,18 @@
 use std::collections::BTreeMap;
 
+// used for any monitor without a valid layout.main_size / layout.top_left entry
+pub const DEFAULT_MAIN_SIZE: &str = "80%x100%";
+pub const DEFAULT_TOP_LEFT: &str = "0,0";
+
 #[derive(serde::Deserialize, Clone)]
+#[serde(default)]
 pub struct Applications {
     pub startups: Vec<String>,
     pub excluded: Vec<String>,
 }
 
 #[derive(serde::Deserialize, Clone)]
+#[serde(default)]
 pub struct Layout {
     pub main_size: Vec<String>,
     pub top_left: Vec<String>,
@@ -19,6 +25,7 @@ pub struct Layout {
 }
 
 #[derive(serde::Deserialize, Clone)]
+#[serde(default)]
 pub struct Bindings {
     pub functions: BTreeMap<String, String>,
     pub swaps: Vec<String>,
@@ -32,18 +39,20 @@ pub struct Bindings {
 }
 
 #[derive(serde::Deserialize, Clone)]
+#[serde(default)]
 pub struct Files {
     pub log_directory: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
+#[serde(default)]
 pub struct Settings {
     pub applications: Applications,
     pub layout: Layout,
     pub bindings: Bindings,
     pub files: Files,
 }
-impl Settings {
+impl Default for Settings {
     fn default() -> Self {
         Self {
             applications: Applications {
@@ -110,26 +119,47 @@ impl Settings {
     }
 }
 
-pub fn get_settings() -> Settings {
+// missing fields / sections fall back to these (serde(default)) instead of discarding the file
+impl Default for Applications {
+    fn default() -> Self {
+        Settings::default().applications
+    }
+}
+impl Default for Layout {
+    fn default() -> Self {
+        Settings::default().layout
+    }
+}
+impl Default for Bindings {
+    fn default() -> Self {
+        Settings::default().bindings
+    }
+}
+impl Default for Files {
+    fn default() -> Self {
+        Settings::default().files
+    }
+}
+
+// also returns warnings, so the wm can log them once logging is set up
+pub fn load_settings() -> (Settings, Vec<String>) {
     let file = shellexpand::tilde("~/.config/pick-full-wm/settings.toml").to_string();
     let path = std::path::Path::new(&file);
-    if path.exists() {
-        if let Ok(text) = std::fs::read_to_string(path) {
-            if let Ok(settings) = toml::from_str(&text) {
-                println!("settings file loaded.");
-                return settings;
-            } else {
-                println!("settings toml error");
-            }
-        } else {
-            println!("settings read failure");
+    let warning = if path.exists() {
+        match std::fs::read_to_string(path) {
+            Ok(text) => match toml::from_str(&text) {
+                Ok(settings) => {
+                    println!("settings file loaded.");
+                    return (settings, vec![]);
+                }
+                Err(e) => format!("Settings file \"{}\" has an error: {}", &file, e),
+            },
+            Err(e) => format!("Failed to read settings file \"{}\": {}", &file, e),
         }
     } else {
-        println!("settings path failure");
-    }
-    println!(
-        "Failed to load settings file from \"{}\": using defaults.",
-        &file,
-    );
-    Settings::default()
+        format!("No settings file at \"{}\".", &file)
+    };
+    let warning = format!("{} Using default settings.", warning);
+    println!("{}", warning);
+    (Settings::default(), vec![warning])
 }

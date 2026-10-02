@@ -16,10 +16,11 @@ pub struct State {
     pub keyboard_mapping: Option<GetKeyboardMappingReply>,
     pub published_client_list: Vec<Window>,
     pub published_desktops: HashMap<Window, usize>,
+    pub startup_warnings: Vec<String>, // logged once logging is set up
 }
 impl State {
     pub fn init() -> Self {
-        let settings = crate::settings::get_settings();
+        let (settings, mut startup_warnings) = crate::settings::load_settings();
         let (conn, screen_num) = crate::setup::internal::connect();
         let screen = &conn.setup().roots[screen_num];
         let root = screen.root;
@@ -32,7 +33,7 @@ impl State {
         let mut monitors: Vec<Monitor> = vec![];
         for (index, info) in monitor_infos.iter().enumerate() {
             info.print();
-            let monitor = Monitor::new(&settings, info, index);
+            let monitor = Monitor::new(&settings, info, index, &mut startup_warnings);
             monitor.print();
             monitors.push(monitor);
         }
@@ -48,6 +49,7 @@ impl State {
             keyboard_mapping: None,
             published_client_list: vec![],
             published_desktops: HashMap::new(),
+            startup_warnings,
         }
     }
     pub fn monitor(&self) -> &Monitor {
@@ -76,12 +78,17 @@ impl Monitor {
         settings: &crate::settings::Settings,
         monitor_info: &MonitorInfo,
         index: usize,
+        warnings: &mut Vec<String>,
     ) -> Self {
-        let sizes = Sizes::init(settings, monitor_info, index);
-        let parsed_position = crate::calc::get_position(
-            sizes.screen.0 as f32,
-            sizes.screen.1 as f32,
-            &settings.layout.top_left[index],
+        let sizes = Sizes::init(settings, monitor_info, index, warnings);
+        let parsed_position = monitor_setting(
+            crate::calc::get_position,
+            (sizes.screen.0 as f32, sizes.screen.1 as f32),
+            &settings.layout.top_left,
+            index,
+            crate::settings::DEFAULT_TOP_LEFT,
+            "top_left",
+            warnings,
         );
         let position = (
             parsed_position.0 + monitor_info.position.0,
@@ -120,15 +127,52 @@ impl Sizes {
         settings: &crate::settings::Settings,
         monitor_info: &MonitorInfo,
         index: usize,
+        warnings: &mut Vec<String>,
     ) -> Self {
         let screen: (i32, i32) = (monitor_info.size.0 as i32, monitor_info.size.1 as i32);
-        let main = crate::calc::get_full_size(
-            screen.0 as f32,
-            screen.1 as f32,
-            &settings.layout.main_size[index],
+        let main = monitor_setting(
+            crate::calc::get_full_size,
+            (screen.0 as f32, screen.1 as f32),
+            &settings.layout.main_size,
+            index,
+            crate::settings::DEFAULT_MAIN_SIZE,
+            "main_size",
+            warnings,
         );
         let side = (screen.0 - main.0, main.1);
         Self { screen, main, side }
+    }
+}
+
+// per-monitor layout entry, falling back to the default if missing or malformed
+fn monitor_setting(
+    parse: fn(f32, f32, &str) -> Option<(i32, i32)>,
+    screen: (f32, f32),
+    entries: &[String],
+    index: usize,
+    default: &str,
+    name: &str,
+    warnings: &mut Vec<String>,
+) -> (i32, i32) {
+    let value = match entries.get(index) {
+        Some(value) => value.as_str(),
+        None => {
+            warnings.push(format!(
+                "No layout.{} entry for monitor {}: using default \"{}\".",
+                name, index, default
+            ));
+            default
+        }
+    };
+    match parse(screen.0, screen.1, value) {
+        Some(parsed) => parsed,
+        None => {
+            warnings.push(format!(
+                "Invalid layout.{} \"{}\" for monitor {}: using default \"{}\".",
+                name, value, index, default
+            ));
+            parse(screen.0, screen.1, default).unwrap_or((0, 0))
+        }
     }
 }
 

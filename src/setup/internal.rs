@@ -124,4 +124,7 @@ pub fn logging(state: &crate::state::State) {
     if !is_local {
         log::warn!("Failed to get local time offset: log times are UTC.");
     }
+    for warning in &state.startup_warnings {
+        log::warn!("{}", warning);
+    }
 }
