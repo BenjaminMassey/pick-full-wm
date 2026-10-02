@@ -7,12 +7,41 @@ use x11rb::protocol::xproto::{
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if state.all_windows.contains(&event.window) {
+        // app hid the window (unmap) and is now showing it again
+        let mut slot: Option<(usize, usize)> = None;
+        for (monitor_index, monitor) in state.monitors.iter().enumerate() {
+            for (workspace_index, workspace) in monitor.workspaces.iter().enumerate() {
+                if workspace.main_window == Some(event.window)
+                    || workspace.side_windows.contains(&Some(event.window))
+                {
+                    slot = Some((monitor_index, workspace_index));
+                }
+            }
+        }
+        if let Some((monitor_index, workspace_index)) = slot {
+            log::info!(
+                "Remapping handled window \"{:?}\" ({}).",
+                crate::windows::gets::window_name(state, event.window),
+                event.window
+            );
+            // hidden workspaces get mapped by workspaces::switch(..) later
+            if workspace_index == state.current_workspace {
+                if let Err(e) = state.conn.map_window(event.window) {
+                    log::error!("events::map_request(..) map window error: {:?}", e);
+                }
+                let real_current_monitor = state.current_monitor; // TODO: gross temp set
+                state.current_monitor = monitor_index; // TODO: gross temp set
+                crate::windows::layout::layout_side_space(state);
+                state.current_monitor = real_current_monitor; // TODO: gross temp set
+            }
+            return;
+        }
         log::warn!(
-            "Skipping remap of handled window \"{:?}\" ({}).",
+            "Handled window \"{:?}\" ({}) lost its slot: mapping as new.",
             crate::windows::gets::window_name(state, event.window),
             event.window
         );
-        return;
+        state.all_windows.remove(&event.window);
     }
     log::info!(
         "Map Window: {:?} ({})",
