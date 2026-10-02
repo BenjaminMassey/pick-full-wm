@@ -121,7 +121,19 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
         crate::windows::audits::full(state);
         crate::windows::workspaces::switch(state);
     } else {
-        // Unknown client message type
-        log::info!("Unhandled ClientMessage type: {:?}", event.type_);
+        // Unknown client message type: atom numbers vary per X session, so log the name
+        let name = match state.conn.get_atom_name(event.type_) {
+            Ok(cookie) => match cookie.reply() {
+                Ok(reply) => String::from_utf8(reply.name).ok(),
+                Err(_) => None,
+            },
+            Err(_) => None,
+        };
+        log::info!(
+            "Unhandled ClientMessage: {} ({}) for window {}.",
+            name.unwrap_or("?".to_owned()),
+            event.type_,
+            event.window
+        );
     }
 }
