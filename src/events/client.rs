@@ -73,20 +73,51 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
             );
             return;
         }
-        if !state.workspace().side_windows.is_empty()
-            && let Some(new_main) = state.workspace().side_windows[0]
-        {
-            crate::windows::core::remove_side_window(state, new_main);
-            crate::windows::core::fill_main_space(state, new_main);
-        } else {
-            state.mut_workspace().main_window = None;
+        let monitor_index = crate::windows::gets::monitor_index(state, event.window);
+        let source_workspace = state.monitors[monitor_index]
+            .workspaces
+            .iter()
+            .position(|w| {
+                w.main_window == Some(event.window) || w.side_windows.contains(&Some(event.window))
+            });
+        let Some(source_workspace) = source_workspace else {
+            log::info!(
+                "Ignored workspace move of unmanaged window {}.",
+                event.window
+            );
+            return;
+        };
+        if source_workspace == target_workspace {
+            return;
         }
+        log::info!(
+            "Moving window {} from workspace #{} to #{}.",
+            event.window,
+            source_workspace,
+            target_workspace
+        );
+        let real_current_monitor = state.current_monitor; // TODO: gross temp set
         let real_current_workspace = state.current_workspace; // TODO: gross temp set
+        state.current_monitor = monitor_index; // TODO: gross temp set
+        state.current_workspace = source_workspace; // TODO: gross temp set
+        if state.workspace().main_window == Some(event.window) {
+            if !state.workspace().side_windows.is_empty()
+                && let Some(new_main) = state.workspace().side_windows[0]
+            {
+                crate::windows::core::remove_side_window(state, new_main);
+                crate::windows::core::fill_main_space(state, new_main);
+            } else {
+                state.mut_workspace().main_window = None;
+            }
+        } else {
+            crate::windows::core::remove_side_window(state, event.window);
+        }
         state.current_workspace = target_workspace; // TODO: gross temp set
         if let Some(move_aside) = state.workspace().main_window.clone() {
             crate::windows::core::send_side_space(state, move_aside, None);
         }
         crate::windows::core::fill_main_space(state, event.window);
+        state.current_monitor = real_current_monitor; // TODO: gross temp set
         state.current_workspace = real_current_workspace; // TODO: gross temp set
         crate::windows::core::focus_main(state);
         crate::windows::audits::full(state);
