@@ -1,7 +1,8 @@
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
-    Allow, ButtonPressEvent, ConnectionExt, KeyButMask, KeyReleaseEvent,
+    Allow, ButtonPressEvent, ConnectionExt, KeyButMask, KeyReleaseEvent, Mapping,
+    MappingNotifyEvent,
 };
 
 pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
@@ -305,19 +306,11 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
 }
 
 fn keycode_to_keysym(state: &crate::state::State, keycode: u8) -> Option<u32> {
-    let setup = state.conn.setup();
-    let min_keycode = setup.min_keycode;
-    let max_keycode = setup.max_keycode;
-
-    let mapping = state
-        .conn
-        .get_keyboard_mapping(min_keycode, max_keycode - min_keycode + 1)
-        .ok()?
-        .reply()
-        .ok()?;
+    let min_keycode = state.conn.setup().min_keycode;
+    let mapping = state.keyboard_mapping.as_ref()?;
 
     let keysyms_per_keycode = mapping.keysyms_per_keycode as usize;
-    let index = (keycode - min_keycode) as usize;
+    let index = (keycode.checked_sub(min_keycode)?) as usize;
 
     if index * keysyms_per_keycode < mapping.keysyms.len() {
         let keysym = mapping.keysyms[index * keysyms_per_keycode];
@@ -326,4 +319,13 @@ fn keycode_to_keysym(state: &crate::state::State, keycode: u8) -> Option<u32> {
         }
     }
     None
+}
+
+pub fn mapping(state: &mut crate::state::State, event: MappingNotifyEvent) {
+    // pointer / modifier remaps don't move which keycodes our bindings live on
+    if event.request != Mapping::KEYBOARD {
+        return;
+    }
+    log::info!("Keyboard mapping changed: re-grabbing keys.");
+    crate::setup::input::grab_keys(state);
 }

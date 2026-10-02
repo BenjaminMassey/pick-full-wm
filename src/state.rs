@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use x11rb::connection::Connection;
 use x11rb::protocol::randr::{self, ConnectionExt as RandrConnectionExt};
-use x11rb::protocol::xproto::Window;
+use x11rb::protocol::xproto::{GetKeyboardMappingReply, Window};
 use x11rb::rust_connection::RustConnection;
 
 pub struct State {
@@ -13,6 +13,7 @@ pub struct State {
     pub current_monitor: usize,
     pub current_workspace: usize,
     pub all_windows: HashSet<Window>,
+    pub keyboard_mapping: Option<GetKeyboardMappingReply>,
 }
 impl State {
     pub fn init() -> Self {
@@ -42,6 +43,7 @@ impl State {
             current_monitor: 0,
             current_workspace: 0,
             all_windows: HashSet::new(),
+            keyboard_mapping: None,
         }
     }
     pub fn monitor(&self) -> &Monitor {

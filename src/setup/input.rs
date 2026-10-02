@@ -1,6 +1,5 @@
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{ButtonIndex, ConnectionExt, EventMask, GrabMode, ModMask};
-use x11rb::rust_connection::RustConnection;
 
 pub fn mouse(state: &mut crate::state::State) {
     let event_mask =
@@ -41,6 +40,15 @@ pub fn mouse(state: &mut crate::state::State) {
 
 pub fn keys(state: &mut crate::state::State) {
     std::thread::sleep(std::time::Duration::from_millis(500));
+    grab_keys(state);
+}
+
+// (re)load the keyboard mapping and grab every bound key; also used on MappingNotify
+pub fn grab_keys(state: &mut crate::state::State) {
+    refresh_keyboard_mapping(state);
+    if let Err(e) = state.conn.ungrab_key(0u8, state.root, ModMask::ANY) {
+        log::error!("setup::grab_keys(..) ungrab key error: {:?}", e);
+    }
     let mut shifts: Vec<String> = vec![];
     shifts.push(state.settings.bindings.monitor.clone());
     shifts.push(state.settings.bindings.close_main.clone());
@@ -50,7 +58,7 @@ pub fn keys(state: &mut crate::state::State) {
     for k in crate::keymap::get_key_strings(state) {
         let keysym = crate::keymap::parse_string(&k.clone());
         if let Some(keysym) = keysym {
-            if let Some(keycode) = keysym_to_keycode(&state.conn, state.root, keysym) {
+            if let Some(keycode) = keysym_to_keycode(state, keysym) {
                 state
                     .conn
                     .grab_key(
@@ -80,26 +88,40 @@ pub fn keys(state: &mut crate::state::State) {
             log::error!("unknown key in settings: {}", k);
         }
     }
+    if let Err(e) = state.conn.flush() {
+        log::error!("setup::grab_keys(..) flush error: {:?}", e);
+    }
 }
 
-fn keysym_to_keycode(conn: &RustConnection, _root: u32, keysym: u32) -> Option<u8> {
-    let setup = conn.setup();
-    let min_keycode = setup.min_keycode;
-    let max_keycode = setup.max_keycode;
-
-    let mapping = conn
+fn refresh_keyboard_mapping(state: &mut crate::state::State) {
+    let min_keycode = state.conn.setup().min_keycode;
+    let max_keycode = state.conn.setup().max_keycode;
+    state.keyboard_mapping = match state
+        .conn
         .get_keyboard_mapping(min_keycode, max_keycode - min_keycode + 1)
-        .ok()?
-        .reply()
-        .ok()?;
+    {
+        Ok(cookie) => match cookie.reply() {
+            Ok(reply) => Some(reply),
+            Err(e) => {
+                log::error!("setup::refresh_keyboard_mapping(..) reply error: {:?}", e);
+                None
+            }
+        },
+        Err(e) => {
+            log::error!("setup::refresh_keyboard_mapping(..) request error: {:?}", e);
+            None
+        }
+    };
+}
+
+fn keysym_to_keycode(state: &crate::state::State, keysym: u32) -> Option<u8> {
+    let min_keycode = state.conn.setup().min_keycode;
+    let mapping = state.keyboard_mapping.as_ref()?;
 
     let keysyms_per_keycode = mapping.keysyms_per_keycode as usize;
-    for i in 0..=(max_keycode - min_keycode) as usize {
-        for j in 0..keysyms_per_keycode {
-            let idx = i * keysyms_per_keycode + j;
-            if idx < mapping.keysyms.len() && mapping.keysyms[idx] == keysym {
-                return Some((min_keycode as usize + i) as u8);
-            }
+    for (idx, mapped) in mapping.keysyms.iter().enumerate() {
+        if *mapped == keysym {
+            return Some((min_keycode as usize + idx / keysyms_per_keycode) as u8);
         }
     }
     None
