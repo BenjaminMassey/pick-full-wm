@@ -30,9 +30,7 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
                     if let Some(main) =
                         state.monitors[index].workspaces[state.current_workspace].main_window
                     {
-                        if let Err(e) = state.conn.destroy_window(main) {
-                            log::error!("events::button(..) destroy window error: {:?}", e);
-                        }
+                        crate::windows::core::close_window(state, main);
                         if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME)
                         {
                             log::error!("events::button(..) allow events error: {:?}", e);
@@ -112,9 +110,7 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
             return;
         }
         log::info!("Right-clicked side window {}", event.child);
-        if let Err(e) = state.conn.destroy_window(event.child) {
-            log::error!("events::button(..) destroy window error: {:?}", e);
-        }
+        crate::windows::core::close_window(state, event.child);
         crate::windows::layout::layout_side_space(state);
         if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
             log::error!("events::button(..) allow events error: {:?}", e);
@@ -176,9 +172,7 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
         if keysym == Some(close_key) && mod4_pressed {
             log::info!("Pressed close key.");
             if let Some(main) = state.workspace().main_window {
-                if let Err(e) = state.conn.destroy_window(main) {
-                    log::error!("events::key(..) destroy window error: {:?}", e);
-                }
+                crate::windows::core::close_window(state, main);
                 if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
                     log::error!("events::key(..) allow events error: {:?}", e);
                 }

@@ -23,5 +23,7 @@ atom_manager! {
         _NET_CLOSE_WINDOW,
         UTF8_STRING,
         WM_NAME,
+        WM_PROTOCOLS,
+        WM_DELETE_WINDOW,
     }
 }

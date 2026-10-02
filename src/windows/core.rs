@@ -1,5 +1,7 @@
 use x11rb::connection::Connection;
-use x11rb::protocol::xproto::{ConfigureWindowAux, ConnectionExt, Window};
+use x11rb::protocol::xproto::{
+    AtomEnum, ClientMessageEvent, ConfigureWindowAux, ConnectionExt, EventMask, Window,
+};
 
 pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
     log::info!("fill_main_space {}", window);
@@ -102,5 +104,48 @@ pub fn remove_floating(state: &mut crate::state::State, window: Window) {
     }
     for remove in removes {
         state.mut_workspace().floatings.remove(remove);
+    }
+}
+
+// politely ask via WM_DELETE_WINDOW if supported, otherwise kill the client
+pub fn close_window(state: &mut crate::state::State, window: Window) {
+    let supports_delete = match state.conn.get_property(
+        false,
+        window,
+        state.atoms.WM_PROTOCOLS,
+        AtomEnum::ATOM,
+        0,
+        1024,
+    ) {
+        Ok(cookie) => match cookie.reply() {
+            Ok(reply) => reply
+                .value32()
+                .is_some_and(|mut atoms| atoms.any(|a| a == state.atoms.WM_DELETE_WINDOW)),
+            Err(_) => false,
+        },
+        Err(_) => false,
+    };
+    if supports_delete {
+        log::info!("Sending WM_DELETE_WINDOW to window {}.", window);
+        let event = ClientMessageEvent::new(
+            32,
+            window,
+            state.atoms.WM_PROTOCOLS,
+            [state.atoms.WM_DELETE_WINDOW, x11rb::CURRENT_TIME, 0, 0, 0],
+        );
+        if let Err(e) = state
+            .conn
+            .send_event(false, window, EventMask::NO_EVENT, event)
+        {
+            log::error!("windows::close_window(..) send event error: {:?}", e);
+        }
+    } else {
+        log::info!("Killing client of window {}.", window);
+        if let Err(e) = state.conn.kill_client(window) {
+            log::error!("windows::close_window(..) kill client error: {:?}", e);
+        }
+    }
+    if let Err(e) = state.conn.flush() {
+        log::error!("windows::close_window(..) flush error: {:?}", e);
     }
 }
