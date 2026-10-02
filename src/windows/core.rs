@@ -72,19 +72,11 @@ pub fn send_side_space(state: &mut crate::state::State, window: Window, index: O
 }
 
 pub fn remove_side_window(state: &mut crate::state::State, window: Window) -> usize {
-    let mut removes: Vec<usize> = vec![];
-    for (index, side_window) in state.workspace().side_windows.iter().enumerate() {
-        if side_window.is_none() || side_window.unwrap() == window {
-            removes.push(index);
-        }
-    }
-    if removes.is_empty() {
-        return 0; // could do better but eh
-    }
-    for index in &removes {
-        state.mut_workspace().side_windows.remove(*index);
-    }
-    removes[removes.len() - 1]
+    let side_windows = &mut state.mut_workspace().side_windows;
+    side_windows.retain(|w| w.is_some());
+    let index = side_windows.iter().position(|w| *w == Some(window));
+    side_windows.retain(|w| *w != Some(window));
+    index.unwrap_or(side_windows.len())
 }
 
 pub fn focus_main(state: &mut crate::state::State) {
