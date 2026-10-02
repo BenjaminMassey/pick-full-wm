@@ -1,4 +1,4 @@
-use x11rb::protocol::xproto::{AtomEnum, ConnectionExt, Window};
+use x11rb::protocol::xproto::{Atom, AtomEnum, ConnectionExt, Window};
 
 pub fn key_hint_window(state: &mut crate::state::State, window: Window) -> Option<String> {
     if let Some(name) = window_name(state, window)
@@ -13,9 +13,28 @@ pub fn key_hint_window(state: &mut crate::state::State, window: Window) -> Optio
 }
 
 pub fn window_name(state: &mut crate::state::State, window: Window) -> Option<String> {
+    // prefer the EWMH utf-8 title, fall back to the legacy one
+    let net_wm_name = state.atoms._NET_WM_NAME;
+    let utf8_string = state.atoms.UTF8_STRING;
+    text_property(state, window, net_wm_name, utf8_string).or_else(|| {
+        text_property(
+            state,
+            window,
+            AtomEnum::WM_NAME.into(),
+            AtomEnum::STRING.into(),
+        )
+    })
+}
+
+fn text_property(
+    state: &crate::state::State,
+    window: Window,
+    property: Atom,
+    type_: Atom,
+) -> Option<String> {
     let reply = state
         .conn
-        .get_property(false, window, AtomEnum::WM_NAME, AtomEnum::STRING, 0, 1024)
+        .get_property(false, window, property, type_, 0, 1024)
         .ok()?
         .reply()
         .ok()?;
