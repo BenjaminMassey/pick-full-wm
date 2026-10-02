@@ -1,4 +1,5 @@
 use x11rb::CURRENT_TIME;
+use x11rb::connection::Connection;
 use x11rb::protocol::xproto::ClientMessageEvent;
 use x11rb::protocol::xproto::{Allow, ConnectionExt};
 
@@ -13,9 +14,26 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
     } else if event.type_ == state.atoms._NET_ACTIVE_WINDOW {
         // Activate/focus a window
         let monitor_index = crate::windows::gets::monitor_index(state, event.window);
+        let workspace = &state.monitors[monitor_index].workspaces[state.current_workspace];
+        let is_side = workspace.side_windows.contains(&Some(event.window));
+        let is_floating = workspace.floatings.contains(&event.window);
+        if !is_side && !is_floating {
+            // unmanaged (override-redirect menus, etc) or already main
+            log::info!("Ignored activate request for window {}.", event.window);
+            return;
+        }
         if monitor_index != state.current_monitor {
             state.current_monitor = monitor_index;
         }
+        if is_floating {
+            log::info!("Activate request for floating window {}.", event.window);
+            crate::ewmh::set_active(state, event.window);
+            if let Err(e) = state.conn.flush() {
+                log::error!("events::client::message(..) flush error: {:?}", e);
+            }
+            return;
+        }
+        log::info!("Activate request for side window {}.", event.window);
         if let Some(existing) = state.workspace().main_window {
             if existing == event.window {
                 return;
