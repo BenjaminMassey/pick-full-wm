@@ -27,6 +27,7 @@ monitor = "tab" # cycle monitor index (hold shift for monitor move)
 [bindings.functions]
 t = "alacritty"
 b = "firefox-esr"
+e = "thunar"
 briu = "brightnessctl set +10%"
 brid = "brightnessctl set 10%-"
 volu = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"

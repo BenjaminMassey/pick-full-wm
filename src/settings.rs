@@ -74,6 +74,7 @@ impl Default for Settings {
                     ("d".to_owned(), "rofi -show drun".to_owned()),
                     ("t".to_owned(), "alacritty".to_owned()),
                     ("b".to_owned(), "firefox-esr".to_owned()),
+                    ("e".to_owned(), "thunar".to_owned()),
                     ("briu".to_owned(), "brightnessctl set +10%".to_owned()),
                     ("brid".to_owned(), "brightnessctl set 10%-".to_owned()),
                     (
