@@ -14,6 +14,8 @@ pub struct State {
     pub current_workspace: usize,
     pub all_windows: HashSet<Window>,
     pub keyboard_mapping: Option<GetKeyboardMappingReply>,
+    pub published_client_list: Vec<Window>,
+    pub published_desktops: HashMap<Window, usize>,
 }
 impl State {
     pub fn init() -> Self {
@@ -44,6 +46,8 @@ impl State {
             current_workspace: 0,
             all_windows: HashSet::new(),
             keyboard_mapping: None,
+            published_client_list: vec![],
+            published_desktops: HashMap::new(),
         }
     }
     pub fn monitor(&self) -> &Monitor {

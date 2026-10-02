@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
@@ -63,8 +64,12 @@ pub fn update_workspace(state: &crate::state::State) {
     }
 }
 
-pub fn update_client_list(state: &crate::state::State) {
+pub fn update_client_list(state: &mut crate::state::State) {
     let client_list: Vec<Window> = state.all_windows.iter().map(|w| w.to_owned()).collect();
+    // every write wakes panels watching the root window, so skip unchanged lists
+    if client_list == state.published_client_list {
+        return;
+    }
 
     if let Err(e) = state.conn.change_property32(
         PropMode::REPLACE,
@@ -95,24 +100,33 @@ pub fn update_client_list(state: &crate::state::State) {
     if let Err(e) = state.conn.flush() {
         log::error!("ewmh::update_client_list(..) flush error: {:?}", e);
     }
+    state.published_client_list = client_list;
 }
 
-pub fn desktop_assignments(state: &crate::state::State) {
+pub fn desktop_assignments(state: &mut crate::state::State) {
+    let mut desktops: HashMap<Window, usize> = HashMap::new();
     for monitor in &state.monitors {
         for (workspace_index, workspace) in monitor.workspaces.iter().enumerate() {
             if let Some(main) = workspace.main_window {
-                set_window_desktop(state, main, workspace_index);
+                desktops.insert(main, workspace_index);
             }
             for side_window in &workspace.side_windows {
                 if let Some(side) = side_window {
-                    set_window_desktop(state, *side, workspace_index);
+                    desktops.insert(*side, workspace_index);
                 }
             }
             if let Some(help) = workspace.help_window {
-                set_window_desktop(state, help, workspace_index);
+                desktops.insert(help, workspace_index);
             }
         }
     }
+    // only write changes: each write notifies the window's client
+    for (window, desktop) in &desktops {
+        if state.published_desktops.get(window) != Some(desktop) {
+            set_window_desktop(state, *window, *desktop);
+        }
+    }
+    state.published_desktops = desktops;
 }
 
 fn set_window_desktop(state: &crate::state::State, window: Window, desktop: usize) {

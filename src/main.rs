@@ -30,6 +30,20 @@ fn main() {
             .conn
             .wait_for_event()
             .expect("Failed to wait for event");
+        // ignored events (mostly notifications of our own moves/maps) skip the per-event work
+        if !matches!(
+            event,
+            Event::MapRequest(_)
+                | Event::ButtonPress(_)
+                | Event::KeyRelease(_)
+                | Event::MappingNotify(_)
+                | Event::ConfigureRequest(_)
+                | Event::UnmapNotify(_)
+                | Event::DestroyNotify(_)
+                | Event::ClientMessage(_)
+        ) {
+            continue;
+        }
         calc::update_current_monitor(&mut state);
         match event {
             Event::MapRequest(e) => {
