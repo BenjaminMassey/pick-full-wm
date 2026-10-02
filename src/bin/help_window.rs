@@ -64,22 +64,38 @@ impl eframe::App for HelpWindow {
                     &self.settings.bindings.help.to_uppercase(),
                     "open this help menu",
                 );
-                mix_color_label(
-                    ui,
-                    &vec![
+                let left_click = if self.settings.bindings.super_for_clicks {
+                    vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("LEFT CLICK", KEY_COLOR),
+                        ("]: make side window main", STANDARD_COLOR),
+                    ]
+                } else {
+                    vec![
                         ("[", STANDARD_COLOR),
                         ("LEFT CLICK", KEY_COLOR),
                         ("]: make side window main", STANDARD_COLOR),
-                    ],
-                );
-                mix_color_label(
-                    ui,
-                    &vec![
+                    ]
+                };
+                mix_color_label(ui, &left_click);
+                let right_click = if self.settings.bindings.super_for_clicks {
+                    vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("RIGHT CLICK", KEY_COLOR),
+                        ("]: kill side window", STANDARD_COLOR),
+                    ]
+                } else {
+                    vec![
                         ("[", STANDARD_COLOR),
                         ("RIGHT CLICK", KEY_COLOR),
                         ("]: kill side window", STANDARD_COLOR),
-                    ],
-                );
+                    ]
+                };
+                mix_color_label(ui, &right_click);
                 super_label(
                     ui,
                     &self.settings.bindings.close_main.to_uppercase(),
