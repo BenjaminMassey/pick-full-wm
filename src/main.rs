@@ -41,6 +41,9 @@ fn main() {
             Event::KeyRelease(e) => {
                 events::input::key(&mut state, e);
             }
+            Event::ConfigureRequest(e) => {
+                events::window::configure_request(&mut state, e);
+            }
             Event::DestroyNotify(e) => {
                 events::window::destroy(&mut state, e);
             }

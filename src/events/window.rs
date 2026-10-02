@@ -1,6 +1,9 @@
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
-use x11rb::protocol::xproto::{Allow, ConnectionExt, DestroyNotifyEvent, MapRequestEvent};
+use x11rb::protocol::xproto::{
+    Allow, CONFIGURE_NOTIFY_EVENT, ConfigureNotifyEvent, ConfigureRequestEvent, ConfigureWindowAux,
+    ConnectionExt, DestroyNotifyEvent, EventMask, MapRequestEvent,
+};
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if state.all_windows.contains(&event.window) {
@@ -165,4 +168,85 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+}
+
+pub fn configure_request(state: &mut crate::state::State, event: ConfigureRequestEvent) {
+    let mut is_tiled = false;
+    let mut is_floating = false;
+    for monitor in &state.monitors {
+        for workspace in &monitor.workspaces {
+            if workspace.main_window == Some(event.window)
+                || workspace.side_windows.contains(&Some(event.window))
+            {
+                is_tiled = true;
+            }
+            if workspace.floatings.contains(&event.window) {
+                is_floating = true;
+            }
+        }
+    }
+    if is_floating {
+        // honor size (and stacking), but keep popups centered
+        let mut aux = ConfigureWindowAux::from_configure_request(&event);
+        aux.x = None;
+        aux.y = None;
+        if let Err(e) = state.conn.configure_window(event.window, &aux) {
+            log::error!(
+                "events::configure_request(..) configure window error: {:?}",
+                e
+            );
+        }
+        crate::windows::layout::center_window(state, event.window);
+        return;
+    }
+    if !is_tiled {
+        // not ours to lay out (excluded, unmapped, etc): honor the request
+        if let Err(e) = state.conn.configure_window(
+            event.window,
+            &ConfigureWindowAux::from_configure_request(&event),
+        ) {
+            log::error!(
+                "events::configure_request(..) configure window error: {:?}",
+                e
+            );
+        }
+        if let Err(e) = state.conn.flush() {
+            log::error!("events::configure_request(..) flush error: {:?}", e);
+        }
+        return;
+    }
+    // tiled: deny, but tell the client its real geometry (ICCCM 4.1.5)
+    log::info!(
+        "Denied configure request for tiled window {}.",
+        event.window
+    );
+    let geometry = match state.conn.get_geometry(event.window) {
+        Ok(cookie) => match cookie.reply() {
+            Ok(reply) => reply,
+            Err(_) => return,
+        },
+        Err(_) => return,
+    };
+    let notify = ConfigureNotifyEvent {
+        response_type: CONFIGURE_NOTIFY_EVENT,
+        sequence: 0,
+        event: event.window,
+        window: event.window,
+        above_sibling: x11rb::NONE,
+        x: geometry.x,
+        y: geometry.y,
+        width: geometry.width,
+        height: geometry.height,
+        border_width: geometry.border_width,
+        override_redirect: false,
+    };
+    if let Err(e) = state
+        .conn
+        .send_event(false, event.window, EventMask::STRUCTURE_NOTIFY, notify)
+    {
+        log::error!("events::configure_request(..) send event error: {:?}", e);
+    }
+    if let Err(e) = state.conn.flush() {
+        log::error!("events::configure_request(..) flush error: {:?}", e);
+    }
 }
