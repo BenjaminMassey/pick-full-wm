@@ -24,19 +24,26 @@ pub fn custom_startups(state: &mut crate::state::State) {
 }
 
 pub fn dbus_init() {
-    if std::process::Command::new("which")
-        .arg("dbus-launch")
+    // systemd / dbus activated services (portals, etc) need this session's display
+    match std::process::Command::new("dbus-update-activation-environment")
+        .args([
+            "--systemd",
+            "DISPLAY",
+            "XAUTHORITY",
+            "XDG_CURRENT_DESKTOP=pick-full-wm",
+        ])
         .status()
-        .is_ok()
-        && std::env::var("DBUS_SESSION_BUS_ADDRESS").is_err()
     {
-        match std::process::Command::new("dbus-launch")
-            .arg("--exit-with-session")
-            .spawn()
-        {
-            Ok(_) => log::info!("Successfully launched dbus-launch"),
-            Err(e) => log::error!("Warning: Failed to launch dbus-launch: {}", e),
-        }
+        Ok(_) => log::info!("Updated dbus activation environment."),
+        Err(e) => log::error!("Failed to update dbus activation environment: {}", e),
+    }
+    // a leftover wayland session's display would be tried first by gtk services
+    match std::process::Command::new("systemctl")
+        .args(["--user", "unset-environment", "WAYLAND_DISPLAY"])
+        .status()
+    {
+        Ok(_) => log::info!("Unset WAYLAND_DISPLAY from systemd environment."),
+        Err(e) => log::error!("Failed to unset WAYLAND_DISPLAY: {}", e),
     }
 }
 
