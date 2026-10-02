@@ -2,7 +2,7 @@ use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
     Allow, CONFIGURE_NOTIFY_EVENT, ConfigureNotifyEvent, ConfigureRequestEvent, ConfigureWindowAux,
-    ConnectionExt, DestroyNotifyEvent, EventMask, MapRequestEvent,
+    ConnectionExt, DestroyNotifyEvent, EventMask, MapRequestEvent, UnmapNotifyEvent,
 };
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
@@ -146,69 +146,19 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
         event.window,
     );
     state.all_windows.remove(&event.window);
-    // find where the window lived, across every monitor and workspace
-    let mut found: Option<(usize, usize)> = None;
-    for (monitor_index, monitor) in state.monitors.iter().enumerate() {
-        for (workspace_index, workspace) in monitor.workspaces.iter().enumerate() {
-            if workspace.main_window == Some(event.window)
-                || workspace.side_windows.contains(&Some(event.window))
-                || workspace.floatings.contains(&event.window)
-                || workspace.help_window == Some(event.window)
-            {
-                found = Some((monitor_index, workspace_index));
-            }
-        }
+    crate::windows::core::release_window(state, event.window);
+}
+
+pub fn unmap(state: &mut crate::state::State, event: UnmapNotifyEvent) {
+    // the wm only unmaps windows on hidden workspaces (workspaces::switch(..)),
+    // so an unmap on the visible workspace means the app hid its window
+    if let Some((_, workspace_index)) = crate::windows::core::find_window(state, event.window)
+        && workspace_index == state.current_workspace
+    {
+        log::info!("Window {} hidden by client.", event.window);
+        state.all_windows.remove(&event.window);
+        crate::windows::core::release_window(state, event.window);
     }
-    let Some((monitor_index, workspace_index)) = found else {
-        return; // not tracked (menus, tooltips, key hints, etc): nothing to re-layout
-    };
-    let is_visible = workspace_index == state.current_workspace;
-    let real_current_monitor = state.current_monitor; // TODO: gross temp set
-    let real_current_workspace = state.current_workspace; // TODO: gross temp set
-    state.current_monitor = monitor_index; // TODO: gross temp set
-    state.current_workspace = workspace_index; // TODO: gross temp set
-    if state.workspace().floatings.contains(&event.window) {
-        crate::windows::core::remove_floating(state, event.window);
-        if is_visible {
-            crate::windows::core::focus_main(state);
-        }
-    } else if state.workspace().help_window == Some(event.window) {
-        state.mut_workspace().help_window = None;
-        if is_visible && let Some(main_window) = state.workspace().main_window {
-            crate::ewmh::set_active(state, main_window);
-            if let Err(e) = state.conn.flush() {
-                log::error!("events::destroy(..) flush error: {:?}", e);
-            }
-        }
-    } else {
-        if state.workspace().main_window == Some(event.window) {
-            if !state.workspace().side_windows.is_empty()
-                && let Some(target) = state.workspace().side_windows[0]
-            {
-                crate::windows::core::remove_side_window(state, target);
-                if is_visible {
-                    crate::windows::core::fill_main_space(state, target);
-                } else {
-                    // hidden: placed by workspaces::switch(..) later, don't steal focus
-                    state.mut_workspace().main_window = Some(target);
-                }
-            } else {
-                state.mut_workspace().main_window = None;
-            }
-        } else {
-            crate::windows::core::remove_side_window(state, event.window);
-        }
-        if is_visible {
-            crate::windows::layout::layout_side_space(state);
-            if state.workspace().main_window.is_none() {
-                crate::ewmh::clear_active(state);
-            }
-        }
-    }
-    state.current_monitor = real_current_monitor; // TODO: gross temp set
-    state.current_workspace = real_current_workspace; // TODO: gross temp set
-    crate::windows::layout::place_close_boxes(state);
-    crate::windows::layout::place_monitor_boxes(state);
 }
 
 pub fn configure_request(state: &mut crate::state::State, event: ConfigureRequestEvent) {

@@ -44,6 +44,9 @@ fn main() {
             Event::ConfigureRequest(e) => {
                 events::window::configure_request(&mut state, e);
             }
+            Event::UnmapNotify(e) => {
+                events::window::unmap(&mut state, e);
+            }
             Event::DestroyNotify(e) => {
                 events::window::destroy(&mut state, e);
             }
