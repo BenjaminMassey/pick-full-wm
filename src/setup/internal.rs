@@ -98,10 +98,16 @@ pub fn logging(state: &crate::state::State) {
     let time: chrono::DateTime<chrono::offset::Local> = chrono::offset::Local::now();
     let time_str = time.format("%Y_%m_%d-%H_%M_%S").to_string();
     let log_path = format!("{}/{}.log", dir_path.to_str().unwrap(), time_str);
+    // local time only resolves while single-threaded, so this must run early
+    let mut config = simplelog::ConfigBuilder::new();
+    let is_local = config.set_time_offset_to_local().is_ok();
     let _ = simplelog::WriteLogger::init(
         simplelog::LevelFilter::max(),
-        simplelog::Config::default(),
+        config.build(),
         std::fs::File::create(&log_path).unwrap(),
     );
     log::info!("Logging initialized at path \"{}\".", &log_path);
+    if !is_local {
+        log::warn!("Failed to get local time offset: log times are UTC.");
+    }
 }
