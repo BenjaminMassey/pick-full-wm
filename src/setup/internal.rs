@@ -10,7 +10,7 @@ pub fn startups(state: &mut crate::state::State) {
             crate::binaries::close_box();
         }
     }
-    if state.settings.layout.close_box && state.monitors.len() > 1 {
+    if state.settings.layout.monitor_box && state.monitors.len() > 1 {
         for _ in 0..state.monitors.len() {
             crate::binaries::monitor_box();
         }
