@@ -7,6 +7,26 @@ pub fn is_excepted_window(state: &mut crate::state::State, window: Window) -> bo
         log::warn!("Reached rare state: should have already passed special checks.");
         return true;
     }
+    // match the fixed WM_CLASS (case-insensitive substring), not the changing title
+    if let Some((instance, class)) = crate::windows::gets::window_class(state, window) {
+        for exception in &state.settings.applications.excluded {
+            let exception_lower = exception.to_lowercase();
+            if instance.to_lowercase().contains(&exception_lower)
+                || class.to_lowercase().contains(&exception_lower)
+            {
+                log::info!(
+                    "Window {} (class \"{}\" / \"{}\") was excepted for match with \"{}\".",
+                    window,
+                    instance,
+                    class,
+                    exception,
+                );
+                return true;
+            }
+        }
+        return false;
+    }
+    // no WM_CLASS at all (rare): fall back to the old title match
     if let Some(name) = crate::windows::gets::window_name(state, window) {
         for exception in &state.settings.applications.excluded {
             if name.contains(exception) {

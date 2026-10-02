@@ -2,7 +2,7 @@ title = "pick-full-wm"
 
 [applications]
 startups = [ "polybar" ]
-excluded = [ "polybar", "rofi" ]
+excluded = [ "polybar", "rofi" ] # matched against window class (WM_CLASS)
 
 [layout]
 main_size = [ "80%x96%", "80%x100%" ] # define per monitor

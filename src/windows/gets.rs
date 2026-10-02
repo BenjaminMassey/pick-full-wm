@@ -26,6 +26,27 @@ pub fn window_name(state: &mut crate::state::State, window: Window) -> Option<St
     })
 }
 
+// WM_CLASS is "instance\0class\0": a fixed app identifier, unlike the title
+pub fn window_class(state: &crate::state::State, window: Window) -> Option<(String, String)> {
+    let reply = state
+        .conn
+        .get_property(false, window, AtomEnum::WM_CLASS, AtomEnum::STRING, 0, 1024)
+        .ok()?
+        .reply()
+        .ok()?;
+
+    let mut pieces = reply
+        .value
+        .split(|b| *b == 0)
+        .map(|p| String::from_utf8_lossy(p).into_owned());
+    let instance = pieces.next()?;
+    let class = pieces.next().unwrap_or_default();
+    if instance.is_empty() && class.is_empty() {
+        return None;
+    }
+    Some((instance, class))
+}
+
 fn text_property(
     state: &crate::state::State,
     window: Window,

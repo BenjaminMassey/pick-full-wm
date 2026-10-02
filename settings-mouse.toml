@@ -2,7 +2,7 @@ title = "pick-full-wm"
 
 [applications]
 startups = [ "xfce4-panel" ]
-excluded = [ "xfce" ]
+excluded = [ "xfce4-panel" ] # matched against window class (WM_CLASS)
 
 [layout]
 main_size = [ "80%x97%", "80%x100%" ] # define per monitor
