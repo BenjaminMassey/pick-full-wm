@@ -43,6 +43,7 @@ pub fn keys(state: &mut crate::state::State) {
     std::thread::sleep(std::time::Duration::from_millis(500));
     let mut shifts: Vec<String> = vec![];
     shifts.push(state.settings.bindings.monitor.clone());
+    shifts.push(state.settings.bindings.close_main.clone());
     for workspace_key in &state.settings.bindings.workspaces {
         shifts.push(workspace_key.clone());
     }

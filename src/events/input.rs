@@ -170,9 +170,14 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     let close_key = crate::keymap::parse_string(&state.settings.bindings.close_main);
     if let Some(close_key) = close_key {
         if keysym == Some(close_key) && mod4_pressed {
-            log::info!("Pressed close key.");
             if let Some(main) = state.workspace().main_window {
-                crate::windows::core::close_window(state, main);
+                if shift_pressed {
+                    log::info!("Pressed close key plus shift to force kill main.");
+                    crate::windows::core::kill_window(state, main);
+                } else {
+                    log::info!("Pressed close key.");
+                    crate::windows::core::close_window(state, main);
+                }
                 if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
                     log::error!("events::key(..) allow events error: {:?}", e);
                 }

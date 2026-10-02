@@ -139,13 +139,21 @@ pub fn close_window(state: &mut crate::state::State, window: Window) {
         {
             log::error!("windows::close_window(..) send event error: {:?}", e);
         }
-    } else {
-        log::info!("Killing client of window {}.", window);
-        if let Err(e) = state.conn.kill_client(window) {
-            log::error!("windows::close_window(..) kill client error: {:?}", e);
+        if let Err(e) = state.conn.flush() {
+            log::error!("windows::close_window(..) flush error: {:?}", e);
         }
+    } else {
+        kill_window(state, window);
+    }
+}
+
+// forcefully disconnect the window's client (for hung apps)
+pub fn kill_window(state: &mut crate::state::State, window: Window) {
+    log::info!("Killing client of window {}.", window);
+    if let Err(e) = state.conn.kill_client(window) {
+        log::error!("windows::kill_window(..) kill client error: {:?}", e);
     }
     if let Err(e) = state.conn.flush() {
-        log::error!("windows::close_window(..) flush error: {:?}", e);
+        log::error!("windows::kill_window(..) flush error: {:?}", e);
     }
 }
