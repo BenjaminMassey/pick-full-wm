@@ -45,6 +45,20 @@ pub fn dbus_init() {
         Ok(_) => log::info!("Unset WAYLAND_DISPLAY from systemd environment."),
         Err(e) => log::error!("Failed to unset WAYLAND_DISPLAY: {}", e),
     }
+    // portals still running from another session keep its environment: restart if running
+    match std::process::Command::new("systemctl")
+        .args([
+            "--user",
+            "--no-block",
+            "try-restart",
+            "xdg-desktop-portal.service",
+            "xdg-desktop-portal-gtk.service",
+        ])
+        .status()
+    {
+        Ok(_) => log::info!("Restarted any running xdg-desktop-portal services."),
+        Err(e) => log::error!("Failed to restart xdg-desktop-portal services: {}", e),
+    }
 }
 
 pub fn windows(state: &mut crate::state::State) {
