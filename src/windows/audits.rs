@@ -64,14 +64,10 @@ pub fn main_space(state: &mut crate::state::State) {
     if let Some(main) = state.workspace().main_window
         && !crate::safety::window_exists(state, main)
     {
-        state.mut_workspace().main_window = None;
         crate::windows::audits::side_windows(state);
-        if !state.workspace().side_windows.is_empty()
-            && let Some(target) = state.workspace().side_windows[0]
-        {
-            crate::windows::core::fill_main_space(state, target);
-            crate::windows::core::remove_side_window(state, target);
-        }
+        // same path as destroy / unmap: promotes side #0 and re-lays out the side space
+        state.all_windows.remove(&main);
+        crate::windows::core::release_window(state, main);
     }
 }
 
