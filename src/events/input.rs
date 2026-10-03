@@ -199,7 +199,8 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
                 } else {
                     state.mut_workspace().fullscreen = Some(main);
                 }
-                crate::windows::core::fill_main_space(state, main);
+                // full layout (not just main) so key hints get re-raised when leaving fullscreen
+                crate::windows::layout::layout_side_space(state);
             }
         }
     }

@@ -1,8 +1,9 @@
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
-    Allow, CONFIGURE_NOTIFY_EVENT, ConfigureNotifyEvent, ConfigureRequestEvent, ConfigureWindowAux,
-    ConnectionExt, DestroyNotifyEvent, EventMask, MapRequestEvent, UnmapNotifyEvent,
+    Allow, CONFIGURE_NOTIFY_EVENT, ConfigWindow, ConfigureNotifyEvent, ConfigureRequestEvent,
+    ConfigureWindowAux, ConnectionExt, DestroyNotifyEvent, EventMask, MapRequestEvent,
+    UnmapNotifyEvent,
 };
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
@@ -178,6 +179,17 @@ pub fn configure_request(state: &mut crate::state::State, event: ConfigureReques
             if workspace.floatings.contains(&event.window) {
                 is_floating = true;
             }
+            // wm helpers are placed and raised by the wm, so treat them like tiled windows
+            if workspace
+                .key_hint_windows
+                .values()
+                .any(|w| *w == event.window)
+            {
+                is_tiled = true;
+            }
+        }
+        if monitor.close_box == Some(event.window) || monitor.monitor_box == Some(event.window) {
+            is_tiled = true;
         }
     }
     if is_floating {
@@ -196,6 +208,9 @@ pub fn configure_request(state: &mut crate::state::State, event: ConfigureReques
     }
     if !is_tiled {
         // not ours to lay out (excluded, unmapped, etc): honor the request
+        if event.value_mask.contains(ConfigWindow::STACK_MODE) {
+            log::info!("Honored restack request from window {}.", event.window);
+        }
         if let Err(e) = state.conn.configure_window(
             event.window,
             &ConfigureWindowAux::from_configure_request(&event),
@@ -212,7 +227,7 @@ pub fn configure_request(state: &mut crate::state::State, event: ConfigureReques
     }
     // tiled: deny, but tell the client its real geometry (ICCCM 4.1.5)
     log::info!(
-        "Denied configure request for tiled window {}.",
+        "Denied configure request for managed window {}.",
         event.window
     );
     let geometry = match state.conn.get_geometry(event.window) {
