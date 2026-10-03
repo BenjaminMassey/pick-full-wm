@@ -26,8 +26,8 @@ impl KeyWindow {
     }
 }
 impl eframe::App for KeyWindow {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ui, |ui| {
             ui.style_mut().interaction.selectable_labels = false;
             ui.centered_and_justified(|ui| {
                 ui.label(egui::RichText::new(&self.key).size(24.0).strong());

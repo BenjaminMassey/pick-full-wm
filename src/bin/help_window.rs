@@ -37,11 +37,11 @@ impl HelpWindow {
     }
 }
 impl eframe::App for HelpWindow {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if ctx.input(|i| i.pointer.any_click()) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if ui.input(|i| i.pointer.any_click()) {
             std::process::exit(0);
         }
-        if ctx.input(|i| {
+        if ui.input(|i| {
             i.events
                 .iter()
                 .any(|e| matches!(e, egui::Event::Key { pressed: true, .. }))
@@ -50,7 +50,7 @@ impl eframe::App for HelpWindow {
         }
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(BG_COLOR))
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.style_mut().interaction.selectable_labels = false;
                 ui.label(
                     egui::RichText::new("Pick Full WM - Help Menu")

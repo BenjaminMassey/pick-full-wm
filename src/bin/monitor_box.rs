@@ -15,10 +15,10 @@ fn main() -> eframe::Result {
 }
 struct MonitorBox;
 impl eframe::App for MonitorBox {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(egui::Color32::from_rgb(0, 0, 140)))
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.style_mut().interaction.selectable_labels = false;
                 ui.centered_and_justified(|ui| {
                     ui.label(

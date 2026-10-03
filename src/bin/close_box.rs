@@ -15,10 +15,10 @@ fn main() -> eframe::Result {
 }
 struct CloseBox;
 impl eframe::App for CloseBox {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(egui::Color32::from_rgb(140, 0, 0)))
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.style_mut().interaction.selectable_labels = false;
                 ui.centered_and_justified(|ui| {
                     ui.label(
