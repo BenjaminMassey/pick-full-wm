@@ -19,10 +19,12 @@ pub fn key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
                     log::error!("windows::audit_key_hints(..) move window error: {:?}", e);
                 }
 
-                if let Err(e) = state.conn.configure_window(
-                    state.workspace().key_hint_windows[k],
-                    &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
-                ) {
+                if !state.workspace().is_fullscreen()
+                    && let Err(e) = state.conn.configure_window(
+                        state.workspace().key_hint_windows[k],
+                        &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+                    )
+                {
                     log::error!("windows::audit_key_hints(..) raise window error: {:?}", e);
                 }
 

@@ -5,6 +5,12 @@ use x11rb::protocol::xproto::{
 
 pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
     log::info!("fill_main_space {}", window);
+    if state.workspace().fullscreen == Some(window) {
+        state.mut_workspace().main_window = Some(window);
+        state.all_windows.insert(window);
+        crate::windows::layout::fullscreen(state, window);
+        return;
+    }
     let side = &state.settings.layout.side_orientation;
     let fill = state.settings.layout.conditional_full;
     let width = if side == "both" {
@@ -168,6 +174,13 @@ pub fn find_window(state: &crate::state::State, window: Window) -> Option<(usize
 
 // drop a gone (destroyed / hidden) window from its slot and fix up the layout
 pub fn release_window(state: &mut crate::state::State, window: Window) {
+    for monitor in &mut state.monitors {
+        for workspace in &mut monitor.workspaces {
+            if workspace.fullscreen == Some(window) {
+                workspace.fullscreen = None;
+            }
+        }
+    }
     let Some((monitor_index, workspace_index)) = find_window(state, window) else {
         return; // not tracked (menus, tooltips, key hints, etc): nothing to re-layout
     };

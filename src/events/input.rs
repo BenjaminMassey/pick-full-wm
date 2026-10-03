@@ -194,12 +194,12 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
         if keysym == Some(full_key) && mod4_pressed {
             log::info!("Pressed fullscreen key.");
             if let Some(main) = state.workspace().main_window {
-                state.mut_workspace().fullscreen = !state.workspace().fullscreen;
-                if state.workspace().fullscreen {
-                    crate::windows::layout::fullscreen(state, main);
+                if state.workspace().fullscreen == Some(main) {
+                    state.mut_workspace().fullscreen = None;
                 } else {
-                    crate::windows::core::fill_main_space(state, main);
+                    state.mut_workspace().fullscreen = Some(main);
                 }
+                crate::windows::core::fill_main_space(state, main);
             }
         }
     }

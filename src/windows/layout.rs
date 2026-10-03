@@ -84,7 +84,7 @@ pub fn layout_side_space(state: &mut crate::state::State) {
 }
 
 pub fn fullscreen(state: &mut crate::state::State, window: Window) {
-    log::info!("Fullscreen toggled.");
+    log::info!("fullscreen {}", window);
     if let Err(e) = state.conn.configure_window(
         window,
         &ConfigureWindowAux::new()
@@ -178,7 +178,7 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
                 log::error!("windows::place_close_boxes(..) move window error: {:?}", e);
             }
             // raise it
-            if !state.monitors[i].workspaces[state.current_workspace].fullscreen
+            if !state.monitors[i].workspaces[state.current_workspace].is_fullscreen()
                 && let Err(e) = state.conn.configure_window(
                     close_box_window,
                     &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
@@ -228,7 +228,7 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
                 );
             }
             // raise it
-            if !state.monitors[i].workspaces[state.current_workspace].fullscreen
+            if !state.monitors[i].workspaces[state.current_workspace].is_fullscreen()
                 && let Err(e) = state.conn.configure_window(
                     monitor_box_window,
                     &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),

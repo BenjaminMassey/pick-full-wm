@@ -182,7 +182,7 @@ pub struct Workspace {
     pub help_window: Option<Window>,
     pub key_hint_windows: HashMap<String, Window>,
     pub floatings: Vec<Window>,
-    pub fullscreen: bool,
+    pub fullscreen: Option<Window>, // stays fullscreen whenever it's this workspace's main
 }
 impl Workspace {
     fn new() -> Self {
@@ -192,8 +192,12 @@ impl Workspace {
             help_window: None,
             key_hint_windows: HashMap::new(),
             floatings: vec![],
-            fullscreen: false,
+            fullscreen: None,
         }
+    }
+    // the fullscreen window is currently main (so it covers the screen)
+    pub fn is_fullscreen(&self) -> bool {
+        self.fullscreen.is_some() && self.fullscreen == self.main_window
     }
 }
 
