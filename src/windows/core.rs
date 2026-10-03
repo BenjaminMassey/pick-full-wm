@@ -96,15 +96,7 @@ pub fn focus_main(state: &mut crate::state::State) {
 }
 
 pub fn remove_floating(state: &mut crate::state::State, window: Window) {
-    let mut removes: Vec<usize> = vec![];
-    for (index, floating) in state.workspace().floatings.iter().enumerate() {
-        if floating == &window {
-            removes.push(index);
-        }
-    }
-    for remove in removes {
-        state.mut_workspace().floatings.remove(remove);
-    }
+    state.mut_workspace().floatings.retain(|w| *w != window);
 }
 
 // politely ask via WM_DELETE_WINDOW if supported, otherwise kill the client

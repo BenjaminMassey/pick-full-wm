@@ -121,7 +121,10 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     }
     if crate::windows::checks::is_popup(state, event.window) {
         log::info!("Window {} should be a popup.", event.window);
-        state.mut_workspace().floatings.push(event.window);
+        // apps can send a second map request before the first takes effect
+        if !state.workspace().floatings.contains(&event.window) {
+            state.mut_workspace().floatings.push(event.window);
+        }
         crate::windows::layout::center_window(state, event.window);
         return;
     }

@@ -127,4 +127,10 @@ pub fn logging(state: &crate::state::State) {
     for warning in &state.startup_warnings {
         log::warn!("{}", warning);
     }
+    // panics otherwise only reach stderr (the tty), not the log
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        log::error!("Panic: {}", info);
+        default_hook(info);
+    }));
 }
