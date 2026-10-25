@@ -1,6 +1,45 @@
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{ConfigureWindowAux, ConnectionExt, StackMode, Window};
 
+// box windows are 60x60 (see bin/close_box.rs / bin/monitor_box.rs)
+pub const BOX_SIZE: i32 = 60;
+
+// (x, width) of the main window on the given monitor, honoring side_orientation and conditional_full
+pub fn main_geometry(
+    monitor: &crate::state::Monitor,
+    settings: &crate::settings::Settings,
+    side_count: usize,
+) -> (i32, i32) {
+    let side = &settings.layout.side_orientation;
+    let fill = settings.layout.conditional_full;
+    let half_side = (monitor.sizes.side.0 as f32 * 0.5f32).floor() as i32;
+    let width = if side == "both" {
+        if fill {
+            if side_count == 0 {
+                monitor.sizes.screen.0
+            } else if side_count == 1 {
+                monitor.sizes.main.0 + half_side
+            } else {
+                monitor.sizes.main.0
+            }
+        } else {
+            monitor.sizes.main.0
+        }
+    } else if fill && side_count == 0 {
+        monitor.sizes.screen.0
+    } else {
+        monitor.sizes.main.0
+    };
+    let x = if side == "right" || (fill && side_count == 0) {
+        monitor.position.0
+    } else if side == "both" {
+        monitor.position.0 + half_side
+    } else {
+        monitor.position.0 + monitor.sizes.side.0
+    };
+    (x, width)
+}
+
 pub fn layout_side_space(state: &mut crate::state::State) {
     let mut hint_positions: Vec<(i32, i32)> = vec![]; // TODO: I hate this
     let side_orientation = &state.settings.layout.side_orientation;
@@ -157,23 +196,17 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
     }
     for i in 0..state.monitors.len() {
         if let Some(close_box_window) = state.monitors[i].close_box.clone() {
-            // position // TODO: real width not hardcoded
-            let x_pos = if !state.settings.layout.conditional_full
-                || !state.monitors[i].workspaces[state.current_workspace]
-                    .side_windows
-                    .is_empty()
-            {
-                state.monitors[i].position.0 + state.monitors[i].sizes.main.0
-            } else {
-                state.monitors[i].position.0 + state.monitors[i].sizes.screen.0 - 60
-            };
+            // right-align the box to the main window's right edge // TODO: real width not hardcoded
+            let side_count = state.monitors[i].workspaces[state.current_workspace].side_windows.len();
+            let (main_x, main_width) = main_geometry(&state.monitors[i], &state.settings, side_count);
+            let x_pos = main_x + main_width - BOX_SIZE;
             if let Err(e) = state.conn.configure_window(
                 close_box_window,
                 &ConfigureWindowAux::new()
                     .x(x_pos)
                     .y(state.monitors[i].position.1)
-                    .width(60)
-                    .height(60),
+                    .width(BOX_SIZE as u32)
+                    .height(BOX_SIZE as u32),
             ) {
                 log::error!("windows::place_close_boxes(..) move window error: {:?}", e);
             }
@@ -199,18 +232,12 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
     }
     for i in 0..state.monitors.len() {
         if let Some(monitor_box_window) = state.monitors[i].monitor_box.clone() {
-            // position // TODO: real width not hardcoded
-            let x_pos = if !state.settings.layout.conditional_full
-                || !state.monitors[i].workspaces[state.current_workspace]
-                    .side_windows
-                    .is_empty()
-            {
-                state.monitors[i].position.0 + state.monitors[i].sizes.main.0
-            } else {
-                state.monitors[i].position.0 + state.monitors[i].sizes.screen.0 - 60
-            };
+            // right-align the box to the main window's right edge // TODO: real width not hardcoded
+            let side_count = state.monitors[i].workspaces[state.current_workspace].side_windows.len();
+            let (main_x, main_width) = main_geometry(&state.monitors[i], &state.settings, side_count);
+            let x_pos = main_x + main_width - BOX_SIZE;
             let y_pos = if state.settings.layout.close_box {
-                state.monitors[i].position.1 + 60
+                state.monitors[i].position.1 + BOX_SIZE
             } else {
                 state.monitors[i].position.1
             };
@@ -219,8 +246,8 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
                 &ConfigureWindowAux::new()
                     .x(x_pos)
                     .y(y_pos)
-                    .width(60)
-                    .height(60),
+                    .width(BOX_SIZE as u32)
+                    .height(BOX_SIZE as u32),
             ) {
                 log::error!(
                     "windows::place_monitor_boxes(..) move window error: {:?}",

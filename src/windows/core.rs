@@ -11,44 +11,16 @@ pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
         crate::windows::layout::fullscreen(state, window);
         return;
     }
-    let side = &state.settings.layout.side_orientation;
-    let fill = state.settings.layout.conditional_full;
-    let width = if side == "both" {
-        if fill {
-            if state.workspace().side_windows.is_empty() {
-                state.monitor().sizes.screen.0
-            } else if state.workspace().side_windows.len() == 1 {
-                state.monitor().sizes.main.0
-                    + (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
-            } else {
-                state.monitor().sizes.main.0
-            }
-        } else {
-            state.monitor().sizes.main.0 // - state.monitor().sizes.side.0
-        }
-    } else {
-        if fill && state.workspace().side_windows.is_empty() {
-            state.monitor().sizes.screen.0
-        } else {
-            state.monitor().sizes.main.0
-        }
-    };
+    let (x, width) = crate::windows::layout::main_geometry(
+        state.monitor(),
+        &state.settings,
+        state.workspace().side_windows.len(),
+    );
 
     if let Err(e) = state.conn.configure_window(
         window,
         &ConfigureWindowAux::new()
-            .x(
-                if side == "right" || (fill && state.workspace().side_windows.is_empty()) {
-                    state.monitor().position.0
-                } else {
-                    if side == "both" {
-                        state.monitor().position.0
-                            + (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
-                    } else {
-                        state.monitor().sizes.side.0 + state.monitor().position.0
-                    }
-                },
-            )
+            .x(x)
             .y(state.monitor().position.1)
             .width(width as u32)
             .height(state.monitor().sizes.main.1 as u32),
