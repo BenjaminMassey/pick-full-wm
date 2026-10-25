@@ -17,6 +17,7 @@ pub struct State {
     pub docks: Vec<Window>, // panels / bars: kept above tiled windows
     pub keyboard_mapping: Option<GetKeyboardMappingReply>,
     pub published_client_list: Vec<Window>,
+    pub published_client_stacking: Vec<Window>,
     pub published_desktops: HashMap<Window, usize>,
     pub startup_warnings: Vec<String>, // logged once logging is set up
 }
@@ -52,6 +53,7 @@ impl State {
             docks: vec![],
             keyboard_mapping: None,
             published_client_list: vec![],
+            published_client_stacking: vec![],
             published_desktops: HashMap::new(),
             startup_warnings,
         }

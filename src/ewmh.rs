@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
@@ -65,42 +65,84 @@ pub fn update_workspace(state: &crate::state::State) {
 }
 
 pub fn update_client_list(state: &mut crate::state::State) {
-    let client_list: Vec<Window> = state.all_windows.iter().map(|w| w.to_owned()).collect();
+    let mut clients: HashSet<Window> = state.all_windows.clone();
+    for monitor in &state.monitors {
+        for workspace in &monitor.workspaces {
+            clients.extend(&workspace.floatings);
+        }
+    }
+
+    // mapping order: keep the last published order, new windows go on the end
+    let mut client_list: Vec<Window> = state
+        .published_client_list
+        .iter()
+        .copied()
+        .filter(|w| clients.contains(w))
+        .collect();
+    for window in &clients {
+        if !client_list.contains(window) {
+            client_list.push(*window);
+        }
+    }
+
+    // stacking order: query_tree(..) lists the root's children bottom to top
+    let client_stacking: Vec<Window> = match state.conn.query_tree(state.root) {
+        Ok(cookie) => match cookie.reply() {
+            Ok(reply) => reply
+                .children
+                .into_iter()
+                .filter(|w| clients.contains(w))
+                .collect(),
+            Err(e) => {
+                log::error!(
+                    "ewmh::update_client_list(..) query tree reply error: {:?}",
+                    e
+                );
+                state.published_client_stacking.clone()
+            }
+        },
+        Err(e) => {
+            log::error!("ewmh::update_client_list(..) query tree error: {:?}", e);
+            state.published_client_stacking.clone()
+        }
+    };
+
     // every write wakes panels watching the root window, so skip unchanged lists
-    if client_list == state.published_client_list {
-        return;
+    if client_list != state.published_client_list {
+        if let Err(e) = state.conn.change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_CLIENT_LIST,
+            AtomEnum::WINDOW,
+            &client_list,
+        ) {
+            log::error!(
+                "ewmh::update_client_list(..) change property NET_CLIENT_LIST error: {:?}",
+                e
+            );
+        }
+        state.published_client_list = client_list;
     }
 
-    if let Err(e) = state.conn.change_property32(
-        PropMode::REPLACE,
-        state.root,
-        state.atoms._NET_CLIENT_LIST,
-        AtomEnum::WINDOW,
-        &client_list,
-    ) {
-        log::error!(
-            "ewmh::update_client_list(..) change property NET_CLIENT_LIST error: {:?}",
-            e
-        );
-    }
-
-    if let Err(e) = state.conn.change_property32(
-        PropMode::REPLACE,
-        state.root,
-        state.atoms._NET_CLIENT_LIST_STACKING,
-        AtomEnum::WINDOW,
-        &client_list,
-    ) {
-        log::error!(
-            "ewmh::update_client_list(..) change property NET_CLIENT_LIST_STACKING error: {:?}",
-            e
-        );
+    if client_stacking != state.published_client_stacking {
+        if let Err(e) = state.conn.change_property32(
+            PropMode::REPLACE,
+            state.root,
+            state.atoms._NET_CLIENT_LIST_STACKING,
+            AtomEnum::WINDOW,
+            &client_stacking,
+        ) {
+            log::error!(
+                "ewmh::update_client_list(..) change property NET_CLIENT_LIST_STACKING error: {:?}",
+                e
+            );
+        }
+        state.published_client_stacking = client_stacking;
     }
 
     if let Err(e) = state.conn.flush() {
         log::error!("ewmh::update_client_list(..) flush error: {:?}", e);
     }
-    state.published_client_list = client_list;
 }
 
 pub fn desktop_assignments(state: &mut crate::state::State) {
@@ -117,6 +159,9 @@ pub fn desktop_assignments(state: &mut crate::state::State) {
             }
             if let Some(help) = workspace.help_window {
                 desktops.insert(help, workspace_index);
+            }
+            for floating in &workspace.floatings {
+                desktops.insert(*floating, workspace_index);
             }
         }
     }
