@@ -241,6 +241,7 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
                         let real_current_workspace = state.current_workspace; // TODO: gross temp set
                         state.current_workspace = index; // TODO: gross temp set
                         if let Some(move_aside) = state.workspace().main_window.clone() {
+                            state.mut_workspace().main_window = None;
                             crate::windows::core::send_side_space(state, move_aside, None);
                         }
                         crate::windows::core::fill_main_space(state, move_target);

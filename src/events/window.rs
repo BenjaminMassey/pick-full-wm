@@ -132,6 +132,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
     if let Some(main) = state.workspace().main_window {
         // a fullscreen main keeps the screen: new windows open on the side
         if state.settings.layout.new_to_main && !state.workspace().is_fullscreen() {
+            state.mut_workspace().main_window = None;
             crate::windows::core::send_side_space(state, main, None);
             crate::windows::core::fill_main_space(state, event.window);
         } else {

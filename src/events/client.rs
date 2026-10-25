@@ -112,6 +112,7 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
         }
         state.current_workspace = target_workspace; // TODO: gross temp set
         if let Some(move_aside) = state.workspace().main_window.clone() {
+            state.mut_workspace().main_window = None;
             crate::windows::core::send_side_space(state, move_aside, None);
         }
         crate::windows::core::fill_main_space(state, event.window);
