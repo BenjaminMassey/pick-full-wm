@@ -69,6 +69,22 @@ pub fn is_monitor_box(state: &mut crate::state::State, window: Window) -> bool {
     false
 }
 
+pub fn is_dock(state: &crate::state::State, window: Window) -> bool {
+    if let Ok(prop) = state.conn.get_property(
+        false,
+        window,
+        state.atoms._NET_WM_WINDOW_TYPE,
+        AtomEnum::ATOM,
+        0,
+        1024,
+    ) && let Ok(reply) = prop.reply()
+        && let Some(mut window_types) = reply.value32()
+    {
+        return window_types.any(|t| t == state.atoms._NET_WM_WINDOW_TYPE_DOCK);
+    }
+    false
+}
+
 pub fn is_popup(state: &crate::state::State, window: Window) -> bool {
     // Check 1: Override-redirect windows (menus, tooltips)
     if let Ok(attrs) = state.conn.get_window_attributes(window) {

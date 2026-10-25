@@ -71,6 +71,7 @@ pub fn focus_main(state: &mut crate::state::State) {
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+    crate::windows::layout::raise_docks(state);
 }
 
 pub fn remove_floating(state: &mut crate::state::State, window: Window) {

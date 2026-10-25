@@ -117,6 +117,14 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         crate::windows::layout::place_monitor_boxes(state);
         return;
     }
+    if crate::windows::checks::is_dock(state, event.window) {
+        log::info!("Window {} should be a dock.", event.window);
+        if !state.docks.contains(&event.window) {
+            state.docks.push(event.window);
+        }
+        crate::windows::layout::raise_docks(state);
+        return;
+    }
     if crate::windows::checks::is_excepted_window(state, event.window) {
         return;
     }

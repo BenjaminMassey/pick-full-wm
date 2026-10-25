@@ -272,3 +272,39 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
         log::error!("windows::place_monitor_boxes(..) flush error: {:?}", e);
     }
 }
+
+// docks sit above everything but a fullscreen main on their monitor
+pub fn raise_docks(state: &mut crate::state::State) {
+    let docks: Vec<Window> = state
+        .docks
+        .iter()
+        .copied()
+        .filter(|w| crate::safety::window_exists(state, *w))
+        .collect();
+    state.docks = docks.clone();
+    for dock in docks {
+        let dock_x = match state.conn.get_geometry(dock) {
+            Ok(cookie) => match cookie.reply() {
+                Ok(reply) => reply.x as i32,
+                Err(_) => continue,
+            },
+            Err(_) => continue,
+        };
+        let is_covered = state.monitors.iter().any(|m| {
+            dock_x >= m.position.0
+                && dock_x < m.position.0 + m.sizes.screen.0
+                && m.workspaces[state.current_workspace].is_fullscreen()
+        });
+        if !is_covered
+            && let Err(e) = state.conn.configure_window(
+                dock,
+                &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+            )
+        {
+            log::error!("windows::raise_docks(..) raise window error: {:?}", e);
+        }
+    }
+    if let Err(e) = state.conn.flush() {
+        log::error!("windows::raise_docks(..) flush error: {:?}", e);
+    }
+}

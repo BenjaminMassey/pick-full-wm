@@ -14,6 +14,7 @@ pub struct State {
     pub current_monitor: usize,
     pub current_workspace: usize,
     pub all_windows: HashSet<Window>,
+    pub docks: Vec<Window>, // panels / bars: kept above tiled windows
     pub keyboard_mapping: Option<GetKeyboardMappingReply>,
     pub published_client_list: Vec<Window>,
     pub published_desktops: HashMap<Window, usize>,
@@ -48,6 +49,7 @@ impl State {
             current_monitor: 0,
             current_workspace: 0,
             all_windows: HashSet::new(),
+            docks: vec![],
             keyboard_mapping: None,
             published_client_list: vec![],
             published_desktops: HashMap::new(),

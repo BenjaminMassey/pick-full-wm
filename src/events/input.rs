@@ -9,6 +9,7 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
     let is_picking =
         event.state.contains(KeyButMask::MOD4) || !state.settings.bindings.super_for_clicks;
     if !crate::safety::window_exists(state, event.child)
+        || state.docks.contains(&event.child)
         || crate::windows::checks::is_excepted_window(state, event.child)
         || crate::windows::checks::is_popup(state, event.child)
     {
