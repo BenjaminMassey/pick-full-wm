@@ -7,6 +7,7 @@ use x11rb::rust_connection::RustConnection;
 pub struct State {
     pub settings: crate::settings::Settings,
     pub conn: RustConnection,
+    pub screen_num: usize,
     pub root: Window,
     pub atoms: crate::atoms::Atoms,
     pub monitors: Vec<Monitor>,
@@ -40,6 +41,7 @@ impl State {
         Self {
             settings,
             conn,
+            screen_num,
             root,
             atoms,
             monitors,

@@ -11,4 +11,4 @@ serde = { version = "1.0.229", features = ["derive"] }
 shellexpand = "3.1.2"
 simplelog = "0.12.2"
 toml = "1.1.6"
-x11rb = { version = "0.14.0", features = ["randr"] }
+x11rb = { version = "0.14.0", features = ["cursor", "randr"] }

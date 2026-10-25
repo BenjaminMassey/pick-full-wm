@@ -71,7 +71,47 @@ pub fn windows(state: &mut crate::state::State) {
         )
         .expect("Failed to select input on root");
 
+    root_cursor(state);
+
     state.conn.sync().expect("Failed to sync");
+}
+
+// the root has no cursor of its own: without one the pointer is invisible until a client sets one
+fn root_cursor(state: &mut crate::state::State) {
+    let database = match x11rb::resource_manager::new_from_default(&state.conn) {
+        Ok(database) => database,
+        Err(e) => {
+            log::error!("setup::root_cursor(..) resource database error: {:?}", e);
+            return;
+        }
+    };
+    let handle = match x11rb::cursor::Handle::new(&state.conn, state.screen_num, &database) {
+        Ok(cookie) => match cookie.reply() {
+            Ok(handle) => handle,
+            Err(e) => {
+                log::error!("setup::root_cursor(..) cursor handle reply error: {:?}", e);
+                return;
+            }
+        },
+        Err(e) => {
+            log::error!("setup::root_cursor(..) cursor handle error: {:?}", e);
+            return;
+        }
+    };
+    let cursor = match handle.load_cursor(&state.conn, "left_ptr") {
+        Ok(cursor) => cursor,
+        Err(e) => {
+            log::error!("setup::root_cursor(..) load cursor error: {:?}", e);
+            return;
+        }
+    };
+    if let Err(e) = state
+        .conn
+        .change_window_attributes(state.root, &ChangeWindowAttributesAux::new().cursor(cursor))
+    {
+        log::error!("setup::root_cursor(..) set cursor error: {:?}", e);
+    }
+    log::info!("Set root window cursor.");
 }
 
 pub fn connect() -> (RustConnection, usize) {
