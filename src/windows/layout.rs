@@ -197,8 +197,11 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
     for i in 0..state.monitors.len() {
         if let Some(close_box_window) = state.monitors[i].close_box.clone() {
             // right-align the box to the main window's right edge // TODO: real width not hardcoded
-            let side_count = state.monitors[i].workspaces[state.current_workspace].side_windows.len();
-            let (main_x, main_width) = main_geometry(&state.monitors[i], &state.settings, side_count);
+            let side_count = state.monitors[i].workspaces[state.current_workspace]
+                .side_windows
+                .len();
+            let (main_x, main_width) =
+                main_geometry(&state.monitors[i], &state.settings, side_count);
             let x_pos = main_x + main_width - BOX_SIZE;
             if let Err(e) = state.conn.configure_window(
                 close_box_window,
@@ -233,8 +236,11 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
     for i in 0..state.monitors.len() {
         if let Some(monitor_box_window) = state.monitors[i].monitor_box.clone() {
             // right-align the box to the main window's right edge // TODO: real width not hardcoded
-            let side_count = state.monitors[i].workspaces[state.current_workspace].side_windows.len();
-            let (main_x, main_width) = main_geometry(&state.monitors[i], &state.settings, side_count);
+            let side_count = state.monitors[i].workspaces[state.current_workspace]
+                .side_windows
+                .len();
+            let (main_x, main_width) =
+                main_geometry(&state.monitors[i], &state.settings, side_count);
             let x_pos = main_x + main_width - BOX_SIZE;
             let y_pos = if state.settings.layout.close_box {
                 state.monitors[i].position.1 + BOX_SIZE
