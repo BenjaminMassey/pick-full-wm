@@ -161,6 +161,7 @@ pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
     );
     state.all_windows.remove(&event.window);
     crate::windows::core::release_window(state, event.window);
+    crate::ewmh::restore_lost_focus(state);
 }
 
 pub fn unmap(state: &mut crate::state::State, event: UnmapNotifyEvent) {
@@ -173,6 +174,7 @@ pub fn unmap(state: &mut crate::state::State, event: UnmapNotifyEvent) {
         state.all_windows.remove(&event.window);
         crate::windows::core::release_window(state, event.window);
     }
+    crate::ewmh::restore_lost_focus(state);
 }
 
 pub fn configure_request(state: &mut crate::state::State, event: ConfigureRequestEvent) {

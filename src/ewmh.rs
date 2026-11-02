@@ -34,6 +34,15 @@ pub fn set_active(state: &mut crate::state::State, window: Window) {
         ) {
             log::error!("ewmh::set_active(..) configure window stack error: {:?}", e);
         }
+    } else {
+        // nothing to focus: hand focus to the root so root key grabs keep firing
+        if let Err(e) = state.conn.set_input_focus(
+            InputFocus::POINTER_ROOT,
+            u32::from(InputFocus::POINTER_ROOT),
+            CURRENT_TIME,
+        ) {
+            log::error!("ewmh::set_active(..) set input focus root error: {:?}", e);
+        }
     }
 
     if let Err(e) = state.conn.flush() {
@@ -43,6 +52,40 @@ pub fn set_active(state: &mut crate::state::State, window: Window) {
 
 pub fn clear_active(state: &mut crate::state::State) {
     set_active(state, 0);
+}
+
+pub fn restore_lost_focus(state: &mut crate::state::State) {
+    // a client may have focused itself with RevertTo None: once that window
+    // goes away focus is None and the server discards all key events
+    let focus = match state.conn.get_input_focus() {
+        Ok(cookie) => match cookie.reply() {
+            Ok(reply) => reply.focus,
+            Err(e) => {
+                log::error!(
+                    "ewmh::restore_lost_focus(..) get input focus reply error: {:?}",
+                    e
+                );
+                return;
+            }
+        },
+        Err(e) => {
+            log::error!(
+                "ewmh::restore_lost_focus(..) get input focus error: {:?}",
+                e
+            );
+            return;
+        }
+    };
+    if focus != x11rb::NONE {
+        return;
+    }
+
+    log::info!("Input focus was lost: restoring it.");
+    if state.workspace().main_window.is_some() {
+        crate::windows::core::focus_main(state);
+    } else {
+        clear_active(state);
+    }
 }
 
 pub fn update_workspace(state: &crate::state::State) {
