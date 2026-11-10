@@ -135,6 +135,9 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
             state.mut_workspace().floatings.push(event.window);
         }
         crate::windows::layout::center_window(state, event.window);
+        if crate::windows::checks::takes_focus(state, event.window) {
+            crate::ewmh::set_active(state, event.window);
+        }
         return;
     }
     if let Some(main) = state.workspace().main_window {

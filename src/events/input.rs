@@ -13,6 +13,11 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
         || crate::windows::checks::is_excepted_window(state, event.child)
         || crate::windows::checks::is_popup(state, event.child)
     {
+        if state.workspace().floatings.contains(&event.child)
+            && crate::windows::checks::takes_focus(state, event.child)
+        {
+            crate::ewmh::set_active(state, event.child);
+        }
         if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
             log::error!("events::button(..) allow events error: {:?}", e);
         }
@@ -73,6 +78,12 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
             }
         } else if let Some(existing) = state.workspace().main_window {
             if !is_picking || existing == event.child {
+                // clicking main takes the keyboard back from an open dialog (floats stay on top)
+                if existing == event.child && crate::windows::core::focus_floating(state).is_some()
+                {
+                    crate::ewmh::set_active(state, existing);
+                    crate::windows::layout::reapply_float_windows(state);
+                }
                 if let Err(e) = state.conn.allow_events(Allow::REPLAY_POINTER, CURRENT_TIME) {
                     log::error!("events::button(..) allow events errors: {:?}", e)
                 };

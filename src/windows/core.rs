@@ -65,6 +65,10 @@ pub fn focus_main(state: &mut crate::state::State) {
     {
         crate::ewmh::set_active(state, window);
         crate::windows::layout::reapply_float_windows(state);
+        // an open dialog keeps the keyboard over its main window
+        if let Some(floating) = focus_floating(state) {
+            crate::ewmh::set_active(state, floating);
+        }
     }
     if let Err(e) = state.conn.flush() {
         log::error!("windows::focus_main(..) flush error: {:?}", e);
@@ -72,6 +76,13 @@ pub fn focus_main(state: &mut crate::state::State) {
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
     crate::windows::layout::raise_docks(state);
+}
+
+// newest floating window on this workspace that should take keyboard focus
+pub fn focus_floating(state: &crate::state::State) -> Option<Window> {
+    state.workspace().floatings.iter().rev().copied().find(|w| {
+        crate::safety::window_exists(state, *w) && crate::windows::checks::takes_focus(state, *w)
+    })
 }
 
 pub fn remove_floating(state: &mut crate::state::State, window: Window) {
