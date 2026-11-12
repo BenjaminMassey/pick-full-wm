@@ -223,20 +223,35 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     let close_key = crate::keymap::parse_string(&state.settings.bindings.close_main);
     if let Some(close_key) = close_key {
         if keysym == Some(close_key) && mod4_pressed {
-            if let Some(main) = state.workspace().focused_main() {
-                if shift_pressed {
-                    log::info!("Pressed close key plus shift to force kill main.");
-                    crate::windows::core::kill_window(state, main);
-                } else {
-                    log::info!("Pressed close key.");
-                    crate::windows::core::close_window(state, main);
-                }
-                if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
-                    log::error!("events::key(..) allow events error: {:?}", e);
-                }
-                if let Err(e) = state.conn.flush() {
-                    log::error!("events::key(..) flush error: {:?}", e);
-                }
+            if shift_pressed {
+                log::info!("Pressed close key plus shift to close the whole main area.");
+            } else {
+                log::info!("Pressed close key.");
+            }
+            crate::windows::core::close_main(state, shift_pressed, false);
+            if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
+                log::error!("events::key(..) allow events error: {:?}", e);
+            }
+            if let Err(e) = state.conn.flush() {
+                log::error!("events::key(..) flush error: {:?}", e);
+            }
+        }
+    }
+
+    let kill_key = crate::keymap::parse_string(&state.settings.bindings.force_kill);
+    if let Some(kill_key) = kill_key {
+        if keysym == Some(kill_key) && mod4_pressed {
+            if shift_pressed {
+                log::info!("Pressed force kill key plus shift to kill the whole main area.");
+            } else {
+                log::info!("Pressed force kill key.");
+            }
+            crate::windows::core::close_main(state, shift_pressed, true);
+            if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
+                log::error!("events::key(..) allow events error: {:?}", e);
+            }
+            if let Err(e) = state.conn.flush() {
+                log::error!("events::key(..) flush error: {:?}", e);
             }
         }
     }

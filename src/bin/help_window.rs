@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            415.0
+            465.0
                 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55)
                 + if window.settings.bindings.focus_follows_mouse {
                     STANDARD_SIZE * 1.55
@@ -115,7 +115,7 @@ impl eframe::App for HelpWindow {
                 super_label(
                     ui,
                     &self.settings.bindings.close_main.to_uppercase(),
-                    "close main window",
+                    "close focused main window",
                 );
                 mix_color_label(
                     ui,
@@ -126,7 +126,24 @@ impl eframe::App for HelpWindow {
                         ("SHIFT", SUPER_COLOR),
                         ("] + [", STANDARD_COLOR),
                         (&self.settings.bindings.close_main.to_uppercase(), KEY_COLOR),
-                        (&format!("]: force kill main window"), STANDARD_COLOR),
+                        (&format!("]: close whole main area"), STANDARD_COLOR),
+                    ],
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.force_kill.to_uppercase(),
+                    "force kill main window",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.force_kill.to_uppercase(), KEY_COLOR),
+                        (&format!("]: force kill whole main area"), STANDARD_COLOR),
                     ],
                 );
                 super_label(

@@ -211,6 +211,22 @@ pub fn remove_floating(state: &mut crate::state::State, window: Window) {
     state.mut_workspace().floatings.retain(|w| *w != window);
 }
 
+// close the focused main window, or (whole_area) every main area window: force kills their clients
+pub fn close_main(state: &mut crate::state::State, whole_area: bool, force: bool) {
+    let targets: Vec<Window> = if whole_area {
+        state.workspace().main_area.clone()
+    } else {
+        state.workspace().focused_main().into_iter().collect()
+    };
+    for window in targets {
+        if force {
+            kill_window(state, window);
+        } else {
+            close_window(state, window);
+        }
+    }
+}
+
 // politely ask via WM_DELETE_WINDOW if supported, otherwise kill the client
 pub fn close_window(state: &mut crate::state::State, window: Window) {
     let supports_delete = match state.conn.get_property(
