@@ -5,7 +5,7 @@ pub fn fill_main_space(state: &mut crate::state::State, area: Vec<Window>) {
     log::info!("fill_main_space {:?}", area);
     state.all_windows.extend(&area);
     state.mut_workspace().main_area = area.clone();
-    if state.workspace().is_fullscreen() {
+    if state.workspace().is_fullscreen() && !state.workspace().fullscreen_solo {
         crate::windows::layout::fullscreen(state, &area);
         return;
     }
@@ -22,11 +22,48 @@ pub fn fill_main_space(state: &mut crate::state::State, area: Vec<Window>) {
         (width as u32, state.monitor().sizes.main.1 as u32),
     );
 
+    // solo: the rest of the split stays laid out underneath the focused window
+    if state.workspace().is_fullscreen()
+        && let Some(focused) = state.workspace().focused_main()
+    {
+        crate::windows::layout::fullscreen(state, &[focused]);
+        return;
+    }
+
     if let Err(e) = state.conn.flush() {
         log::error!("windows::fill_main_space(..) flush error: {:?}", e);
     }
 
     focus_main(state);
+}
+
+// fullscreen the whole main area, or (solo) only its focused window: the same key again leaves it
+pub fn toggle_fullscreen(state: &mut crate::state::State, solo: bool) {
+    // keyed on the first window: pops / joins only change the end of a split main
+    let Some(main) = state.workspace().main_area.first().copied() else {
+        return;
+    };
+    if state.workspace().is_fullscreen() && state.workspace().fullscreen_solo == solo {
+        log::info!("Leaving fullscreen.");
+        state.mut_workspace().fullscreen = None;
+    } else {
+        log::info!("Entering fullscreen (solo: {}).", solo);
+        state.mut_workspace().fullscreen = Some(main);
+        state.mut_workspace().fullscreen_solo = solo;
+    }
+    // full layout (not just main) so key hints get re-raised when leaving fullscreen
+    crate::windows::layout::layout_side_space(state);
+}
+
+// give a main area window the keyboard: a solo fullscreen moves along with it
+pub fn focus_main_window(state: &mut crate::state::State, window: Window) {
+    state.mut_workspace().main_focus = Some(window);
+    if state.workspace().is_fullscreen() && state.workspace().fullscreen_solo {
+        let main = state.workspace().main_area.clone();
+        fill_main_space(state, main);
+    } else {
+        focus_main(state);
+    }
 }
 
 pub fn send_side_space(state: &mut crate::state::State, area: Vec<Window>, index: Option<usize>) {
@@ -129,8 +166,7 @@ pub fn cycle_split(state: &mut crate::state::State) {
         .unwrap_or(0);
     let next = main_area[(index + 1) % main_area.len()];
     log::info!("Cycling split focus to main window {}.", next);
-    state.mut_workspace().main_focus = Some(next);
-    focus_main(state);
+    focus_main_window(state, next);
 }
 
 // focus follows the mouse within the main area only: side windows never take the keyboard
@@ -141,8 +177,7 @@ pub fn focus_hovered(state: &mut crate::state::State, window: Window) {
         return;
     }
     log::info!("Pointer entered main window {}: focusing it.", window);
-    state.mut_workspace().main_focus = Some(window);
-    focus_main(state);
+    focus_main_window(state, window);
 }
 
 pub fn focus_main(state: &mut crate::state::State) {

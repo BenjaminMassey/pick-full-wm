@@ -244,17 +244,12 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     let full_key = crate::keymap::parse_string(&state.settings.bindings.fullscreen);
     if let Some(full_key) = full_key {
         if keysym == Some(full_key) && mod4_pressed {
-            log::info!("Pressed fullscreen key.");
-            // keyed on the first window: pops / joins only change the end of a split main
-            if let Some(main) = state.workspace().main_area.first().copied() {
-                if state.workspace().is_fullscreen() {
-                    state.mut_workspace().fullscreen = None;
-                } else {
-                    state.mut_workspace().fullscreen = Some(main);
-                }
-                // full layout (not just main) so key hints get re-raised when leaving fullscreen
-                crate::windows::layout::layout_side_space(state);
+            if shift_pressed {
+                log::info!("Pressed fullscreen key plus shift for focused main window only.");
+            } else {
+                log::info!("Pressed fullscreen key.");
             }
+            crate::windows::core::toggle_fullscreen(state, shift_pressed);
         }
     }
 

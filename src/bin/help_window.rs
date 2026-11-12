@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            390.0
+            415.0
                 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55)
                 + if window.settings.bindings.focus_follows_mouse {
                     STANDARD_SIZE * 1.55
@@ -132,7 +132,22 @@ impl eframe::App for HelpWindow {
                 super_label(
                     ui,
                     &self.settings.bindings.fullscreen.to_uppercase(),
-                    "fullscreen main window",
+                    "fullscreen main area",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.fullscreen.to_uppercase(), KEY_COLOR),
+                        (
+                            &format!("]: fullscreen focused main window only"),
+                            STANDARD_COLOR,
+                        ),
+                    ],
                 );
                 super_label(
                     ui,

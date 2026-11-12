@@ -198,6 +198,7 @@ pub struct Workspace {
     pub key_hint_windows: HashMap<String, Window>,
     pub floatings: Vec<Window>,
     pub fullscreen: Option<Window>, // stays fullscreen whenever it's in this workspace's main area
+    pub fullscreen_solo: bool, // fullscreen covers the screen with only the focused main window
 }
 impl Workspace {
     fn new() -> Self {
@@ -209,6 +210,7 @@ impl Workspace {
             key_hint_windows: HashMap::new(),
             floatings: vec![],
             fullscreen: None,
+            fullscreen_solo: false,
         }
     }
     // the fullscreen window is currently in main (so the main area covers the screen)

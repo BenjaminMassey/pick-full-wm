@@ -45,8 +45,7 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
             // already main: only matters for a split main area, where it takes the keyboard
             if state.workspace().focused_main() != Some(event.window) {
                 log::info!("Activate request for main window {}.", event.window);
-                state.mut_workspace().main_focus = Some(event.window);
-                crate::windows::core::focus_main(state);
+                crate::windows::core::focus_main_window(state, event.window);
             }
             return;
         }
