@@ -42,12 +42,13 @@ pub fn main_geometry(
 
 pub fn layout_side_space(state: &mut crate::state::State) {
     let mut hint_positions: Vec<(i32, i32)> = vec![]; // TODO: I hate this
+    let mut split_positions: Vec<(i32, i32)> = vec![]; // top-right of each side area
     let side_orientation = &state.settings.layout.side_orientation;
-    let true_side_count = state.workspace().side_windows.len();
-    for (true_index, window) in state.workspace().side_windows.iter().enumerate() {
+    let true_side_count = state.workspace().side_areas.len();
+    for (true_index, area) in state.workspace().side_areas.iter().enumerate() {
         let is_left_side = (true_index % 2) == 0;
         let side_count = if side_orientation == "both" {
-            let half = state.workspace().side_windows.len() as f32 * 0.5f32;
+            let half = state.workspace().side_areas.len() as f32 * 0.5f32;
             if is_left_side {
                 half.ceil() as usize
             } else {
@@ -67,75 +68,111 @@ pub fn layout_side_space(state: &mut crate::state::State) {
         } else {
             true_index
         };
-        if let Some(window) = window {
-            let size = (
-                if side_orientation == "both" {
-                    (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as u32
-                } else {
-                    state.monitor().sizes.side.0 as u32
-                },
-                side_height as u32,
-            );
-            let position = (
-                if (side_orientation == "both" && is_left_side) || side_orientation == "left" {
-                    state.monitor().position.0
-                } else {
-                    state.monitor().position.0
-                        + state.monitor().sizes.main.0
-                        + if side_orientation == "both" {
-                            (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
-                        } else {
-                            0
-                        }
-                },
-                state.monitor().position.1 + (size.1 as f32 * index as f32) as i32,
-            );
-            if let Err(e) = state.conn.configure_window(
-                *window,
-                &ConfigureWindowAux::new()
-                    .x(position.0)
-                    .y(position.1)
-                    .width(size.0) // TODO: take into account x offset
-                    .height(size.1),
-            ) {
-                log::error!("windows::layout_side_space(..) move window error: {:?}", e);
-            }
-            log::info!(
-                "layout_side_space {} {},{} {}x{}",
-                window,
-                position.0,
-                position.1,
-                size.0,
-                size.1,
-            );
-            hint_positions.push(position);
-        }
+        let size = (
+            if side_orientation == "both" {
+                (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as u32
+            } else {
+                state.monitor().sizes.side.0 as u32
+            },
+            side_height as u32,
+        );
+        let position = (
+            if (side_orientation == "both" && is_left_side) || side_orientation == "left" {
+                state.monitor().position.0
+            } else {
+                state.monitor().position.0
+                    + state.monitor().sizes.main.0
+                    + if side_orientation == "both" {
+                        (state.monitor().sizes.side.0 as f32 * 0.5f32).floor() as i32
+                    } else {
+                        0
+                    }
+            },
+            state.monitor().position.1 + (size.1 as f32 * index as f32) as i32,
+        );
+        // a split area previews as split: its windows side-by-side within the slot
+        // TODO: take into account x offset
+        crate::windows::layout::split_area(state, area, position, size);
+        log::info!(
+            "layout_side_space {:?} {},{} {}x{}",
+            area,
+            position.0,
+            position.1,
+            size.0,
+            size.1,
+        );
+        hint_positions.push(position);
+        split_positions.push((position.0 + size.0 as i32 - BOX_SIZE, position.1));
     }
     if let Err(e) = state.conn.flush() {
         log::error!("windows::fill_main_space(..) flush error: {:?}", e);
     }
     crate::windows::audits::key_hints(state, &hint_positions);
-    if let Some(main) = state.workspace().main_window {
+    crate::windows::audits::split_boxes(state, &split_positions);
+    let main = state.workspace().main_area.clone();
+    if !main.is_empty() {
         crate::windows::core::fill_main_space(state, main);
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+    crate::windows::layout::place_pop_boxes(state);
 }
 
-pub fn fullscreen(state: &mut crate::state::State, window: Window) {
-    log::info!("fullscreen {}", window);
-    if let Err(e) = state.conn.configure_window(
-        window,
-        &ConfigureWindowAux::new()
-            .x(state.monitor().position.0
+// lay an area's windows out side-by-side across the given space (the last takes any remainder)
+pub fn split_area(
+    state: &crate::state::State,
+    area: &[Window],
+    position: (i32, i32),
+    size: (u32, u32),
+) {
+    if area.is_empty() {
+        return;
+    }
+    let width = size.0 / area.len() as u32;
+    for (i, window) in area.iter().enumerate() {
+        let window_width = if i + 1 == area.len() {
+            size.0 - width * i as u32
+        } else {
+            width
+        };
+        if let Err(e) = state.conn.configure_window(
+            *window,
+            &ConfigureWindowAux::new()
+                .x(position.0 + (width * i as u32) as i32)
+                .y(position.1)
+                .width(window_width)
+                .height(size.1),
+        ) {
+            log::error!("windows::split_area(..) move window error: {:?}", e);
+        }
+    }
+}
+
+pub fn fullscreen(state: &mut crate::state::State, area: &[Window]) {
+    log::info!("fullscreen {:?}", area);
+    split_area(
+        state,
+        area,
+        (
+            state.monitor().position.0
                 + ((state.monitor().sizes.main.0 + state.monitor().sizes.side.0)
-                    - state.monitor().sizes.screen.0))
-            .y(state.monitor().position.1
-                + (state.monitor().sizes.main.1 - state.monitor().sizes.screen.1))
-            .width(state.monitor().sizes.screen.0 as u32)
-            .height(state.monitor().sizes.screen.1 as u32),
-    ) {
-        log::error!("windows::fullscreen(..) move window error: {:?}", e);
+                    - state.monitor().sizes.screen.0),
+            state.monitor().position.1
+                + (state.monitor().sizes.main.1 - state.monitor().sizes.screen.1),
+        ),
+        (
+            state.monitor().sizes.screen.0 as u32,
+            state.monitor().sizes.screen.1 as u32,
+        ),
+    );
+    // all of a split area (not just the focused window) covers boxes / docks / key hints
+    for window in area {
+        if let Err(e) = state.conn.configure_window(
+            *window,
+            &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+        ) {
+            log::error!("windows::fullscreen(..) raise window error: {:?}", e);
+        }
     }
 
     if let Err(e) = state.conn.flush() {
@@ -198,7 +235,7 @@ pub fn place_close_boxes(state: &mut crate::state::State) {
         if let Some(close_box_window) = state.monitors[i].close_box.clone() {
             // right-align the box to the main window's right edge // TODO: real width not hardcoded
             let side_count = state.monitors[i].workspaces[state.current_workspace]
-                .side_windows
+                .side_areas
                 .len();
             let (main_x, main_width) =
                 main_geometry(&state.monitors[i], &state.settings, side_count);
@@ -237,7 +274,7 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
         if let Some(monitor_box_window) = state.monitors[i].monitor_box.clone() {
             // right-align the box to the main window's right edge // TODO: real width not hardcoded
             let side_count = state.monitors[i].workspaces[state.current_workspace]
-                .side_windows
+                .side_areas
                 .len();
             let (main_x, main_width) =
                 main_geometry(&state.monitors[i], &state.settings, side_count);
@@ -276,6 +313,63 @@ pub fn place_monitor_boxes(state: &mut crate::state::State) {
     }
     if let Err(e) = state.conn.flush() {
         log::error!("windows::place_monitor_boxes(..) flush error: {:?}", e);
+    }
+}
+
+// below the close / monitor boxes, and only shown while the main area is split
+pub fn place_pop_boxes(state: &mut crate::state::State) {
+    if !state.settings.layout.pop_box {
+        return;
+    }
+    for i in 0..state.monitors.len() {
+        if let Some(pop_box_window) = state.monitors[i].pop_box.clone() {
+            let workspace = &state.monitors[i].workspaces[state.current_workspace];
+            if workspace.main_area.len() < 2 {
+                if let Err(e) = state.conn.unmap_window(pop_box_window) {
+                    log::error!("windows::place_pop_boxes(..) unmap window error: {:?}", e);
+                }
+                continue;
+            }
+            // right-align the box to the main window's right edge // TODO: real width not hardcoded
+            let (main_x, main_width) = main_geometry(
+                &state.monitors[i],
+                &state.settings,
+                workspace.side_areas.len(),
+            );
+            let x_pos = main_x + main_width - BOX_SIZE;
+            let mut y_pos = state.monitors[i].position.1;
+            if state.settings.layout.close_box {
+                y_pos += BOX_SIZE;
+            }
+            if state.settings.layout.monitor_box && state.monitors.len() > 1 {
+                y_pos += BOX_SIZE;
+            }
+            if let Err(e) = state.conn.configure_window(
+                pop_box_window,
+                &ConfigureWindowAux::new()
+                    .x(x_pos)
+                    .y(y_pos)
+                    .width(BOX_SIZE as u32)
+                    .height(BOX_SIZE as u32),
+            ) {
+                log::error!("windows::place_pop_boxes(..) move window error: {:?}", e);
+            }
+            if let Err(e) = state.conn.map_window(pop_box_window) {
+                log::error!("windows::place_pop_boxes(..) map window error: {:?}", e);
+            }
+            // raise it
+            if !workspace.is_fullscreen()
+                && let Err(e) = state.conn.configure_window(
+                    pop_box_window,
+                    &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+                )
+            {
+                log::error!("windows::place_pop_boxes(..) raise window error: {:?}", e);
+            }
+        }
+    }
+    if let Err(e) = state.conn.flush() {
+        log::error!("windows::place_pop_boxes(..) flush error: {:?}", e);
     }
 }
 

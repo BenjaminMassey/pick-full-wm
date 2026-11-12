@@ -19,6 +19,20 @@ pub fn monitor_box() {
     }
 }
 
+pub fn split_box() {
+    if let Some(dir) = get_pfwm_dir() {
+        let path = &format!("{}/split_box", dir);
+        crate::windows::misc::run_command(&path);
+    }
+}
+
+pub fn pop_box() {
+    if let Some(dir) = get_pfwm_dir() {
+        let path = &format!("{}/pop_box", dir);
+        crate::windows::misc::run_command(&path);
+    }
+}
+
 pub fn key_hint(key: &str) {
     if let Some(dir) = get_pfwm_dir() {
         let path = &format!("{}/key_hint \"{}\"", dir, key);

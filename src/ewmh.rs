@@ -81,7 +81,7 @@ pub fn restore_lost_focus(state: &mut crate::state::State) {
     }
 
     log::info!("Input focus was lost: restoring it.");
-    if state.workspace().main_window.is_some() {
+    if !state.workspace().main_area.is_empty() {
         crate::windows::core::focus_main(state);
     } else {
         clear_active(state);
@@ -192,11 +192,11 @@ pub fn desktop_assignments(state: &mut crate::state::State) {
     let mut desktops: HashMap<Window, usize> = HashMap::new();
     for monitor in &state.monitors {
         for (workspace_index, workspace) in monitor.workspaces.iter().enumerate() {
-            if let Some(main) = workspace.main_window {
-                desktops.insert(main, workspace_index);
+            for main in &workspace.main_area {
+                desktops.insert(*main, workspace_index);
             }
-            for side_window in &workspace.side_windows {
-                if let Some(side) = side_window {
+            for area in &workspace.side_areas {
+                for side in area {
                     desktops.insert(*side, workspace_index);
                 }
             }

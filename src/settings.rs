@@ -22,6 +22,8 @@ pub struct Layout {
     pub swap_not_stack: bool,
     pub close_box: bool,
     pub monitor_box: bool,
+    pub split_box: bool,
+    pub pop_box: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -30,8 +32,12 @@ pub struct Bindings {
     pub functions: BTreeMap<String, String>,
     pub swaps: Vec<String>,
     pub super_for_clicks: bool,
+    pub focus_follows_mouse: bool,
     pub close_main: String,
+    pub force_kill: String,
     pub fullscreen: String,
+    pub split: String,
+    pub cycle_split: String,
     pub help: String,
     pub key_hints: bool,
     pub workspaces: Vec<String>,
@@ -68,6 +74,8 @@ impl Default for Settings {
                 swap_not_stack: true,
                 close_box: true,
                 monitor_box: true,
+                split_box: false,
+                pop_box: false,
             },
             bindings: Bindings {
                 functions: BTreeMap::from([
@@ -101,8 +109,12 @@ impl Default for Settings {
                     "p".to_owned(),
                 ],
                 super_for_clicks: false,
+                focus_follows_mouse: false,
                 close_main: "q".to_owned(),
+                force_kill: "esc".to_owned(),
                 fullscreen: "f".to_owned(),
+                split: "s".to_owned(),
+                cycle_split: "c".to_owned(),
                 help: "h".to_owned(),
                 key_hints: true,
                 workspaces: vec![

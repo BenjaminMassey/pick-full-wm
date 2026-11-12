@@ -19,7 +19,13 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            315.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
+            465.0
+                + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55)
+                + if window.settings.bindings.focus_follows_mouse {
+                    STANDARD_SIZE * 1.55
+                } else {
+                    0.0
+                },
         ]),
         centered: true,
         ..Default::default()
@@ -96,10 +102,20 @@ impl eframe::App for HelpWindow {
                     ]
                 };
                 mix_color_label(ui, &right_click);
+                if self.settings.bindings.focus_follows_mouse {
+                    mix_color_label(
+                        ui,
+                        &vec![
+                            ("[", STANDARD_COLOR),
+                            ("HOVER", KEY_COLOR),
+                            ("]: focus main area window", STANDARD_COLOR),
+                        ],
+                    );
+                }
                 super_label(
                     ui,
                     &self.settings.bindings.close_main.to_uppercase(),
-                    "close main window",
+                    "close focused main window",
                 );
                 mix_color_label(
                     ui,
@@ -110,18 +126,75 @@ impl eframe::App for HelpWindow {
                         ("SHIFT", SUPER_COLOR),
                         ("] + [", STANDARD_COLOR),
                         (&self.settings.bindings.close_main.to_uppercase(), KEY_COLOR),
-                        (&format!("]: force kill main window"), STANDARD_COLOR),
+                        (&format!("]: close whole main area"), STANDARD_COLOR),
+                    ],
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.force_kill.to_uppercase(),
+                    "force kill main window",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.force_kill.to_uppercase(), KEY_COLOR),
+                        (&format!("]: force kill whole main area"), STANDARD_COLOR),
                     ],
                 );
                 super_label(
                     ui,
                     &self.settings.bindings.fullscreen.to_uppercase(),
-                    "fullscreen main window",
+                    "fullscreen main area",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.fullscreen.to_uppercase(), KEY_COLOR),
+                        (
+                            &format!("]: fullscreen focused main window only"),
+                            STANDARD_COLOR,
+                        ),
+                    ],
                 );
                 super_label(
                     ui,
                     &self.settings.bindings.swaps.join("  ").to_uppercase(),
                     "swap with side",
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.split.to_uppercase(),
+                    "split main with next swap",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.split.to_uppercase(), KEY_COLOR),
+                        (
+                            &format!("]: pop last window off split main"),
+                            STANDARD_COLOR,
+                        ),
+                    ],
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.cycle_split.to_uppercase(),
+                    "cycle focus across split main",
                 );
                 super_label(
                     ui,

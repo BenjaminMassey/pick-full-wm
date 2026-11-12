@@ -1,9 +1,9 @@
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
-    Allow, CONFIGURE_NOTIFY_EVENT, ConfigWindow, ConfigureNotifyEvent, ConfigureRequestEvent,
-    ConfigureWindowAux, ConnectionExt, DestroyNotifyEvent, EventMask, MapRequestEvent,
-    UnmapNotifyEvent,
+    Allow, CONFIGURE_NOTIFY_EVENT, ChangeWindowAttributesAux, ConfigWindow, ConfigureNotifyEvent,
+    ConfigureRequestEvent, ConfigureWindowAux, ConnectionExt, DestroyNotifyEvent, EventMask,
+    MapRequestEvent, UnmapNotifyEvent,
 };
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
@@ -12,8 +12,8 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         let mut slot: Option<(usize, usize)> = None;
         for (monitor_index, monitor) in state.monitors.iter().enumerate() {
             for (workspace_index, workspace) in monitor.workspaces.iter().enumerate() {
-                if workspace.main_window == Some(event.window)
-                    || workspace.side_windows.contains(&Some(event.window))
+                if workspace.main_area.contains(&event.window)
+                    || workspace.side_index(event.window).is_some()
                 {
                     slot = Some((monitor_index, workspace_index));
                 }
@@ -105,6 +105,35 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         crate::windows::layout::place_close_boxes(state);
         return;
     }
+    if crate::windows::checks::is_pop_box(state, event.window) {
+        log::info!("Window {} should be a pop box.", event.window);
+        for i in 0..state.monitors.len() {
+            if state.monitors[i].pop_box.is_none() {
+                log::info!("connecting pop box {} to monitor {}", event.window, i);
+                state.monitors[i].pop_box = Some(event.window);
+                break;
+            }
+        }
+        crate::windows::layout::place_pop_boxes(state);
+        return;
+    }
+    if crate::windows::checks::is_split_box(state, event.window) {
+        log::info!("Window {} should be a split box.", event.window);
+        // goes to whichever monitor spawned one (see windows::audits::split_boxes(..))
+        let monitor_index = state
+            .monitors
+            .iter()
+            .position(|m| m.split_boxes_pending > 0)
+            .unwrap_or(state.current_monitor);
+        let monitor = &mut state.monitors[monitor_index];
+        monitor.split_boxes_pending = monitor.split_boxes_pending.saturating_sub(1);
+        monitor.split_boxes.push(event.window);
+        let real_current_monitor = state.current_monitor; // TODO: gross temp set
+        state.current_monitor = monitor_index; // TODO: gross temp set
+        crate::windows::layout::layout_side_space(state);
+        state.current_monitor = real_current_monitor; // TODO: gross temp set
+        return;
+    }
     if crate::windows::checks::is_monitor_box(state, event.window) {
         log::info!("Window {} should be a monitor box.", event.window);
         for i in 0..state.monitors.len() {
@@ -115,6 +144,7 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
             }
         }
         crate::windows::layout::place_monitor_boxes(state);
+        crate::windows::layout::place_pop_boxes(state);
         return;
     }
     if crate::windows::checks::is_dock(state, event.window) {
@@ -140,20 +170,31 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         }
         return;
     }
-    if let Some(main) = state.workspace().main_window {
+    // pointer crossings for focus follows mouse (see windows::core::focus_hovered(..))
+    if state.settings.bindings.focus_follows_mouse
+        && let Err(e) = state.conn.change_window_attributes(
+            event.window,
+            &ChangeWindowAttributesAux::new().event_mask(EventMask::ENTER_WINDOW),
+        )
+    {
+        log::error!("events::map_request(..) select input error: {:?}", e);
+    }
+    let main = state.workspace().main_area.clone();
+    if !main.is_empty() {
         // a fullscreen main keeps the screen: new windows open on the side
         if state.settings.layout.new_to_main && !state.workspace().is_fullscreen() {
-            state.mut_workspace().main_window = None;
+            state.mut_workspace().main_area = vec![];
             crate::windows::core::send_side_space(state, main, None);
-            crate::windows::core::fill_main_space(state, event.window);
+            crate::windows::core::fill_main_space(state, vec![event.window]);
         } else {
-            crate::windows::core::send_side_space(state, event.window, None);
+            crate::windows::core::send_side_space(state, vec![event.window], None);
         }
     } else {
-        crate::windows::core::fill_main_space(state, event.window);
+        crate::windows::core::fill_main_space(state, vec![event.window]);
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+    crate::windows::layout::place_pop_boxes(state);
 }
 
 pub fn destroy(state: &mut crate::state::State, event: DestroyNotifyEvent) {
@@ -185,8 +226,8 @@ pub fn configure_request(state: &mut crate::state::State, event: ConfigureReques
     let mut is_floating = false;
     for monitor in &state.monitors {
         for workspace in &monitor.workspaces {
-            if workspace.main_window == Some(event.window)
-                || workspace.side_windows.contains(&Some(event.window))
+            if workspace.main_area.contains(&event.window)
+                || workspace.side_index(event.window).is_some()
             {
                 is_tiled = true;
             }
@@ -202,7 +243,11 @@ pub fn configure_request(state: &mut crate::state::State, event: ConfigureReques
                 is_tiled = true;
             }
         }
-        if monitor.close_box == Some(event.window) || monitor.monitor_box == Some(event.window) {
+        if monitor.close_box == Some(event.window)
+            || monitor.monitor_box == Some(event.window)
+            || monitor.pop_box == Some(event.window)
+            || monitor.split_boxes.contains(&event.window)
+        {
             is_tiled = true;
         }
     }

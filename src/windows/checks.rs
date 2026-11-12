@@ -69,6 +69,24 @@ pub fn is_monitor_box(state: &mut crate::state::State, window: Window) -> bool {
     false
 }
 
+pub fn is_split_box(state: &mut crate::state::State, window: Window) -> bool {
+    if let Some(name) = crate::windows::gets::window_name(state, window)
+        && name.contains("pfwm split")
+    {
+        return true;
+    }
+    false
+}
+
+pub fn is_pop_box(state: &mut crate::state::State, window: Window) -> bool {
+    if let Some(name) = crate::windows::gets::window_name(state, window)
+        && name.contains("pfwm pop")
+    {
+        return true;
+    }
+    false
+}
+
 pub fn is_dock(state: &crate::state::State, window: Window) -> bool {
     if let Ok(prop) = state.conn.get_property(
         false,

@@ -1,66 +1,187 @@
 use x11rb::connection::Connection;
-use x11rb::protocol::xproto::{
-    AtomEnum, ClientMessageEvent, ConfigureWindowAux, ConnectionExt, EventMask, Window,
-};
+use x11rb::protocol::xproto::{AtomEnum, ClientMessageEvent, ConnectionExt, EventMask, Window};
 
-pub fn fill_main_space(state: &mut crate::state::State, window: Window) {
-    log::info!("fill_main_space {}", window);
-    if state.workspace().fullscreen == Some(window) {
-        state.mut_workspace().main_window = Some(window);
-        state.all_windows.insert(window);
-        crate::windows::layout::fullscreen(state, window);
+pub fn fill_main_space(state: &mut crate::state::State, area: Vec<Window>) {
+    log::info!("fill_main_space {:?}", area);
+    state.all_windows.extend(&area);
+    state.mut_workspace().main_area = area.clone();
+    if state.workspace().is_fullscreen() && !state.workspace().fullscreen_solo {
+        crate::windows::layout::fullscreen(state, &area);
         return;
     }
     let (x, width) = crate::windows::layout::main_geometry(
         state.monitor(),
         &state.settings,
-        state.workspace().side_windows.len(),
+        state.workspace().side_areas.len(),
     );
 
-    if let Err(e) = state.conn.configure_window(
-        window,
-        &ConfigureWindowAux::new()
-            .x(x)
-            .y(state.monitor().position.1)
-            .width(width as u32)
-            .height(state.monitor().sizes.main.1 as u32),
-    ) {
-        log::error!("windows::fill_main_space(..) move window error: {:?}", e);
+    crate::windows::layout::split_area(
+        state,
+        &area,
+        (x, state.monitor().position.1),
+        (width as u32, state.monitor().sizes.main.1 as u32),
+    );
+
+    // solo: the rest of the split stays laid out underneath the focused window
+    if state.workspace().is_fullscreen()
+        && let Some(focused) = state.workspace().focused_main()
+    {
+        crate::windows::layout::fullscreen(state, &[focused]);
+        return;
     }
 
     if let Err(e) = state.conn.flush() {
         log::error!("windows::fill_main_space(..) flush error: {:?}", e);
     }
 
-    state.mut_workspace().main_window = Some(window);
     focus_main(state);
-    state.all_windows.insert(window);
 }
 
-pub fn send_side_space(state: &mut crate::state::State, window: Window, index: Option<usize>) {
-    remove_side_window(state, window);
-    if let Some(index) = index {
-        state
-            .mut_workspace()
-            .side_windows
-            .insert(index, Some(window));
+// fullscreen the whole main area, or (solo) only its focused window: the same key again leaves it
+pub fn toggle_fullscreen(state: &mut crate::state::State, solo: bool) {
+    // keyed on the first window: pops / joins only change the end of a split main
+    let Some(main) = state.workspace().main_area.first().copied() else {
+        return;
+    };
+    if state.workspace().is_fullscreen() && state.workspace().fullscreen_solo == solo {
+        log::info!("Leaving fullscreen.");
+        state.mut_workspace().fullscreen = None;
     } else {
-        state.mut_workspace().side_windows.push(Some(window));
+        log::info!("Entering fullscreen (solo: {}).", solo);
+        state.mut_workspace().fullscreen = Some(main);
+        state.mut_workspace().fullscreen_solo = solo;
     }
-    state.all_windows.insert(window);
+    // full layout (not just main) so key hints get re-raised when leaving fullscreen
     crate::windows::layout::layout_side_space(state);
 }
 
+// give a main area window the keyboard: a solo fullscreen moves along with it
+pub fn focus_main_window(state: &mut crate::state::State, window: Window) {
+    state.mut_workspace().main_focus = Some(window);
+    if state.workspace().is_fullscreen() && state.workspace().fullscreen_solo {
+        let main = state.workspace().main_area.clone();
+        fill_main_space(state, main);
+    } else {
+        focus_main(state);
+    }
+}
+
+pub fn send_side_space(state: &mut crate::state::State, area: Vec<Window>, index: Option<usize>) {
+    for window in &area {
+        remove_side_window(state, *window);
+    }
+    state.all_windows.extend(&area);
+    if !area.is_empty() {
+        let side_areas = &mut state.mut_workspace().side_areas;
+        if let Some(index) = index {
+            side_areas.insert(index.min(side_areas.len()), area);
+        } else {
+            side_areas.push(area);
+        }
+    }
+    crate::windows::layout::layout_side_space(state);
+}
+
+// drop one window from whichever side area holds it (dropping the area once empty)
 pub fn remove_side_window(state: &mut crate::state::State, window: Window) -> usize {
-    let side_windows = &mut state.mut_workspace().side_windows;
-    side_windows.retain(|w| w.is_some());
-    let index = side_windows.iter().position(|w| *w == Some(window));
-    side_windows.retain(|w| *w != Some(window));
-    index.unwrap_or(side_windows.len())
+    let side_areas = &mut state.mut_workspace().side_areas;
+    let index = side_areas.iter().position(|a| a.contains(&window));
+    for area in side_areas.iter_mut() {
+        area.retain(|w| *w != window);
+    }
+    side_areas.retain(|a| !a.is_empty());
+    index.unwrap_or(side_areas.len())
+}
+
+// pull the whole side area at index out (empty if there isn't one)
+pub fn take_side_area(state: &mut crate::state::State, index: usize) -> Vec<Window> {
+    let side_areas = &mut state.mut_workspace().side_areas;
+    if index < side_areas.len() {
+        side_areas.remove(index)
+    } else {
+        vec![]
+    }
+}
+
+// bring the side area at index to main: joining the main area if a split is queued,
+// swapping places with it otherwise
+pub fn swap_side_area(state: &mut crate::state::State, index: usize, focus: Option<Window>) {
+    if state.split_queued && !state.workspace().main_area.is_empty() {
+        join_side_area(state, index, focus);
+        return;
+    }
+    let area = take_side_area(state, index);
+    if area.is_empty() {
+        return;
+    }
+    let existing = state.workspace().main_area.clone();
+    state.split_queued = false;
+    state.mut_workspace().main_focus = focus;
+    fill_main_space(state, area);
+    if !existing.is_empty() {
+        if state.settings.layout.swap_not_stack {
+            send_side_space(state, existing, Some(index));
+        } else {
+            send_side_space(state, existing, None);
+        }
+    }
+}
+
+// add the side area at index onto the right of the main area as a split
+pub fn join_side_area(state: &mut crate::state::State, index: usize, focus: Option<Window>) {
+    let area = take_side_area(state, index);
+    if area.is_empty() {
+        return;
+    }
+    log::info!("Splitting side area #{} into main.", index);
+    state.split_queued = false;
+    state.mut_workspace().main_focus = focus.or(area.first().copied());
+    let mut joined = state.workspace().main_area.clone();
+    joined.extend(area);
+    fill_main_space(state, joined);
+    crate::windows::layout::layout_side_space(state);
+}
+
+// send the right-most window of a split main area to the end of the side
+pub fn pop_split(state: &mut crate::state::State) {
+    if state.workspace().main_area.len() < 2 {
+        log::info!("Main area isn't split: nothing to pop.");
+        return;
+    }
+    if let Some(popped) = state.mut_workspace().main_area.pop() {
+        log::info!("Popping main window {} off the split.", popped);
+        send_side_space(state, vec![popped], None);
+    }
+}
+
+// move the keyboard to the next window of a split main area: left to right, looping
+pub fn cycle_split(state: &mut crate::state::State) {
+    let main_area = state.workspace().main_area.clone();
+    if main_area.len() < 2 {
+        return;
+    }
+    let index = main_area
+        .iter()
+        .position(|w| Some(*w) == state.workspace().focused_main())
+        .unwrap_or(0);
+    let next = main_area[(index + 1) % main_area.len()];
+    log::info!("Cycling split focus to main window {}.", next);
+    focus_main_window(state, next);
+}
+
+// focus follows the mouse within the main area only: side windows never take the keyboard
+pub fn focus_hovered(state: &mut crate::state::State, window: Window) {
+    if !state.workspace().main_area.contains(&window)
+        || state.workspace().focused_main() == Some(window)
+    {
+        return;
+    }
+    log::info!("Pointer entered main window {}: focusing it.", window);
+    focus_main_window(state, window);
 }
 
 pub fn focus_main(state: &mut crate::state::State) {
-    if let Some(window) = state.workspace().main_window
+    if let Some(window) = state.workspace().focused_main()
         && crate::safety::window_exists(state, window)
     {
         crate::ewmh::set_active(state, window);
@@ -75,6 +196,7 @@ pub fn focus_main(state: &mut crate::state::State) {
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+    crate::windows::layout::place_pop_boxes(state);
     crate::windows::layout::raise_docks(state);
 }
 
@@ -87,6 +209,22 @@ pub fn focus_floating(state: &crate::state::State) -> Option<Window> {
 
 pub fn remove_floating(state: &mut crate::state::State, window: Window) {
     state.mut_workspace().floatings.retain(|w| *w != window);
+}
+
+// close the focused main window, or (whole_area) every main area window: force kills their clients
+pub fn close_main(state: &mut crate::state::State, whole_area: bool, force: bool) {
+    let targets: Vec<Window> = if whole_area {
+        state.workspace().main_area.clone()
+    } else {
+        state.workspace().focused_main().into_iter().collect()
+    };
+    for window in targets {
+        if force {
+            kill_window(state, window);
+        } else {
+            close_window(state, window);
+        }
+    }
 }
 
 // politely ask via WM_DELETE_WINDOW if supported, otherwise kill the client
@@ -144,8 +282,8 @@ pub fn kill_window(state: &mut crate::state::State, window: Window) {
 pub fn find_window(state: &crate::state::State, window: Window) -> Option<(usize, usize)> {
     for (monitor_index, monitor) in state.monitors.iter().enumerate() {
         for (workspace_index, workspace) in monitor.workspaces.iter().enumerate() {
-            if workspace.main_window == Some(window)
-                || workspace.side_windows.contains(&Some(window))
+            if workspace.main_area.contains(&window)
+                || workspace.side_index(window).is_some()
                 || workspace.floatings.contains(&window)
                 || workspace.help_window == Some(window)
             {
@@ -180,33 +318,31 @@ pub fn release_window(state: &mut crate::state::State, window: Window) {
         }
     } else if state.workspace().help_window == Some(window) {
         state.mut_workspace().help_window = None;
-        if is_visible && let Some(main_window) = state.workspace().main_window {
+        if is_visible && let Some(main_window) = state.workspace().focused_main() {
             crate::ewmh::set_active(state, main_window);
             if let Err(e) = state.conn.flush() {
                 log::error!("windows::release_window(..) flush error: {:?}", e);
             }
         }
     } else {
-        if state.workspace().main_window == Some(window) {
-            if !state.workspace().side_windows.is_empty()
-                && let Some(target) = state.workspace().side_windows[0]
-            {
-                remove_side_window(state, target);
+        if state.workspace().main_area.contains(&window) {
+            // the rest of a split main area stays: only an emptied one takes side #0
+            state.mut_workspace().main_area.retain(|w| *w != window);
+            if state.workspace().main_area.is_empty() && !state.workspace().side_areas.is_empty() {
+                let target = take_side_area(state, 0);
                 if is_visible {
                     fill_main_space(state, target);
                 } else {
                     // hidden: placed by workspaces::switch(..) later, don't steal focus
-                    state.mut_workspace().main_window = Some(target);
+                    state.mut_workspace().main_area = target;
                 }
-            } else {
-                state.mut_workspace().main_window = None;
             }
         } else {
             remove_side_window(state, window);
         }
         if is_visible {
             crate::windows::layout::layout_side_space(state);
-            if state.workspace().main_window.is_none() {
+            if state.workspace().main_area.is_empty() {
                 crate::ewmh::clear_active(state);
             }
         }
@@ -215,4 +351,5 @@ pub fn release_window(state: &mut crate::state::State, window: Window) {
     state.current_workspace = real_current_workspace; // TODO: gross temp set
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+    crate::windows::layout::place_pop_boxes(state);
 }
