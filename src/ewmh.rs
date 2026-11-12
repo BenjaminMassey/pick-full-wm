@@ -107,6 +107,54 @@ pub fn update_workspace(state: &crate::state::State) {
     }
 }
 
+pub fn publish_desktops(state: &mut crate::state::State) {
+    let desktop_count = state.monitor().workspaces.len() as u32;
+    if let Err(e) = state.conn.change_property32(
+        PropMode::REPLACE,
+        state.root,
+        state.atoms._NET_NUMBER_OF_DESKTOPS,
+        AtomEnum::CARDINAL,
+        &[desktop_count],
+    ) {
+        log::error!(
+            "ewmh::publish_desktops(..) change property NET_NUMBER_OF_DESKTOPS error: {:?}",
+            e
+        );
+    }
+
+    // names come from the workspace keybinds, exactly as at startup (setup::ewmh::init)
+    let names: Vec<u8> = state
+        .settings
+        .bindings
+        .workspaces
+        .iter()
+        .take(desktop_count as usize)
+        .flat_map(|s| {
+            let mut bytes = s.as_bytes().to_vec();
+            bytes.push(0);
+            bytes
+        })
+        .collect();
+
+    if let Err(e) = state.conn.change_property8(
+        PropMode::REPLACE,
+        state.root,
+        state.atoms._NET_DESKTOP_NAMES,
+        state.atoms.UTF8_STRING,
+        &names,
+    ) {
+        log::error!(
+            "ewmh::publish_desktops(..) change property NET_DESKTOP_NAMES error: {:?}",
+            e
+        );
+    }
+
+    crate::ewmh::update_workspace(state);
+    if let Err(e) = state.conn.flush() {
+        log::error!("ewmh::publish_desktops(..) flush error: {:?}", e);
+    }
+}
+
 pub fn update_client_list(state: &mut crate::state::State) {
     let mut clients: HashSet<Window> = state.all_windows.clone();
     for monitor in &state.monitors {

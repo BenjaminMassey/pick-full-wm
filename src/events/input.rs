@@ -224,6 +224,14 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
         }
     }
 
+    let reload_key = crate::keymap::parse_string(&state.settings.bindings.reload);
+    if let Some(reload_key) = reload_key {
+        if keysym == Some(reload_key) && mod4_pressed && shift_pressed {
+            log::info!("Pressed reload key: reloading settings.");
+            crate::reload::settings(state);
+        }
+    }
+
     for (index, key) in state
         .settings
         .bindings

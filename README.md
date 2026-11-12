@@ -20,7 +20,7 @@ The first is via an appropriate `.xinitrc` file from a TTY session via the [`sta
 
 The second is from a display manager such as [`SDDM`](https://github.com/sddm/sddm), which looks for an appropriate [`.desktop` file](https://wiki.archlinux.org/title/Desktop_entries) in `/usr/share/xsessions/`, and can be loaded from some window manager menu (bottom left in SDDM's interface). An example `pick-full.desktop` is found in the root of this repository.
 
-The next layer is configuring your `settings.toml` file. There is are two examples in the root of this repository: `setting-mouse.toml` and `setting-keyboard.toml`. Choose your preferred starter, copy it as "settings.toml" into `~/.config/pick-full-wm/`, and start editing as desired.
+The next layer is configuring your `settings.toml` file. There is are two examples in the root of this repository: `setting-mouse.toml` and `setting-keyboard.toml`. Choose your preferred starter, copy it as "settings.toml" into `~/.config/pick-full-wm/`, and start editing as desired. Settings can be reloaded via hotkey (see help window).
 
 The current mouse defaults use [`xfce4-panel`](https://packages.debian.org/trixie/xfce4-panel) for both launcher and status bar. The current keyboard defaults use [`rofi`](https://github.com/davatorium/rofi) as an application launcher and [`polybar`](https://github.com/polybar/polybar) as a status bar. Both use `brightnessctl` for brightness control and `wpctl` for volume control. These are very much dynamic and change-able, though, of course: just startup and exclude clarifications.
 
@@ -50,6 +50,7 @@ By default, both settings place their log files in `~/.local/share/pick-full-wm/
 - [x] Some implementation of virtual workspaces
 - [x] Set new windows to main space (optional)
 - [x] Dynamic keybinds to run any command
+- [x] Live settings reload with `SUPER + SHIFT + R`
 - [x] Ability to move main to different workspace
 - [x] Mouse-driven way to close main window
 - [x] Support for close and move-workspace client messages

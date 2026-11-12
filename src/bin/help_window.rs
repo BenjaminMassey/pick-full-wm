@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            315.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
+            340.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
         ]),
         centered: true,
         ..Default::default()
@@ -117,6 +117,18 @@ impl eframe::App for HelpWindow {
                     ui,
                     &self.settings.bindings.fullscreen.to_uppercase(),
                     "fullscreen main window",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.reload.to_uppercase(), KEY_COLOR),
+                        (&format!("]: reload settings file"), STANDARD_COLOR),
+                    ],
                 );
                 super_label(
                     ui,

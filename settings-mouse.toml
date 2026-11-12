@@ -20,6 +20,7 @@ super_for_clicks = false # need to hold super for swapping via clicks
 close_main = "q"
 fullscreen = "f"
 help = "h"
+reload = "r" # hold shift
 key_hints = false
 workspaces = [ "1", "2", "3", "4" ] # also defines how many
 monitor = "tab" # cycle monitor index (hold shift for monitor move)

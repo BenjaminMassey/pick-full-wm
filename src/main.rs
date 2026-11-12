@@ -7,6 +7,7 @@ mod calc;
 mod events;
 mod ewmh;
 mod keymap;
+mod reload;
 mod safety;
 mod settings;
 mod setup;
