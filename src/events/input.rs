@@ -49,6 +49,32 @@ pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
                     }
                 }
             }
+        } else if crate::windows::checks::is_split_box(state, event.child) {
+            log::info!("Clicked on split box.");
+            // split box #i sits on side area #i (see windows::audits::split_boxes(..))
+            if let Some(index) = state
+                .monitor()
+                .split_boxes
+                .iter()
+                .position(|w| *w == event.child)
+            {
+                crate::windows::core::join_side_area(state, index, None);
+            }
+            if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
+                log::error!("events::button(..) allow events error: {:?}", e);
+            }
+            if let Err(e) = state.conn.flush() {
+                log::error!("events::button(..) flush error: {:?}", e);
+            }
+        } else if crate::windows::checks::is_pop_box(state, event.child) {
+            log::info!("Clicked on pop box.");
+            crate::windows::core::pop_split(state);
+            if let Err(e) = state.conn.allow_events(Allow::ASYNC_POINTER, CURRENT_TIME) {
+                log::error!("events::button(..) allow events error: {:?}", e);
+            }
+            if let Err(e) = state.conn.flush() {
+                log::error!("events::button(..) flush error: {:?}", e);
+            }
         } else if crate::windows::checks::is_monitor_box(state, event.child) {
             log::info!("Clicked on monitor box.");
             for index in 0..state.monitors.len() {
@@ -170,14 +196,8 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
     if let Some(split_key) = split_key {
         if keysym == Some(split_key) && mod4_pressed {
             if shift_pressed {
-                if state.workspace().main_area.len() > 1 {
-                    log::info!("Pressed split key plus shift to pop the last main window.");
-                    if let Some(popped) = state.mut_workspace().main_area.pop() {
-                        crate::windows::core::send_side_space(state, vec![popped], None);
-                    }
-                } else {
-                    log::info!("Pressed split key plus shift: main area isn't split.");
-                }
+                log::info!("Pressed split key plus shift to pop the last main window.");
+                crate::windows::core::pop_split(state);
             } else {
                 state.split_queued = !state.split_queued;
                 log::info!(

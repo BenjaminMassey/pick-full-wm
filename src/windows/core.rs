@@ -69,21 +69,15 @@ pub fn take_side_area(state: &mut crate::state::State, index: usize) -> Vec<Wind
 // bring the side area at index to main: joining the main area if a split is queued,
 // swapping places with it otherwise
 pub fn swap_side_area(state: &mut crate::state::State, index: usize, focus: Option<Window>) {
+    if state.split_queued && !state.workspace().main_area.is_empty() {
+        join_side_area(state, index, focus);
+        return;
+    }
     let area = take_side_area(state, index);
     if area.is_empty() {
         return;
     }
     let existing = state.workspace().main_area.clone();
-    if state.split_queued && !existing.is_empty() {
-        log::info!("Splitting side area #{} into main.", index);
-        state.split_queued = false;
-        state.mut_workspace().main_focus = focus.or(area.first().copied());
-        let mut joined = existing;
-        joined.extend(area);
-        fill_main_space(state, joined);
-        crate::windows::layout::layout_side_space(state);
-        return;
-    }
     state.split_queued = false;
     state.mut_workspace().main_focus = focus;
     fill_main_space(state, area);
@@ -93,6 +87,33 @@ pub fn swap_side_area(state: &mut crate::state::State, index: usize, focus: Opti
         } else {
             send_side_space(state, existing, None);
         }
+    }
+}
+
+// add the side area at index onto the right of the main area as a split
+pub fn join_side_area(state: &mut crate::state::State, index: usize, focus: Option<Window>) {
+    let area = take_side_area(state, index);
+    if area.is_empty() {
+        return;
+    }
+    log::info!("Splitting side area #{} into main.", index);
+    state.split_queued = false;
+    state.mut_workspace().main_focus = focus.or(area.first().copied());
+    let mut joined = state.workspace().main_area.clone();
+    joined.extend(area);
+    fill_main_space(state, joined);
+    crate::windows::layout::layout_side_space(state);
+}
+
+// send the right-most window of a split main area to the end of the side
+pub fn pop_split(state: &mut crate::state::State) {
+    if state.workspace().main_area.len() < 2 {
+        log::info!("Main area isn't split: nothing to pop.");
+        return;
+    }
+    if let Some(popped) = state.mut_workspace().main_area.pop() {
+        log::info!("Popping main window {} off the split.", popped);
+        send_side_space(state, vec![popped], None);
     }
 }
 
@@ -140,6 +161,7 @@ pub fn focus_main(state: &mut crate::state::State) {
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+    crate::windows::layout::place_pop_boxes(state);
     crate::windows::layout::raise_docks(state);
 }
 
@@ -278,4 +300,5 @@ pub fn release_window(state: &mut crate::state::State, window: Window) {
     state.current_workspace = real_current_workspace; // TODO: gross temp set
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
+    crate::windows::layout::place_pop_boxes(state);
 }

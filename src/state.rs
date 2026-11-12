@@ -80,6 +80,9 @@ pub struct Monitor {
     pub workspaces: Vec<Workspace>,
     pub close_box: Option<Window>,
     pub monitor_box: Option<Window>,
+    pub pop_box: Option<Window>,
+    pub split_boxes: Vec<Window>, // one per side area (extras kept unmapped for reuse)
+    pub split_boxes_pending: usize, // spawned but not mapped yet
 }
 impl Monitor {
     pub fn new(
@@ -112,6 +115,9 @@ impl Monitor {
             workspaces,
             close_box: None,
             monitor_box: None,
+            pop_box: None,
+            split_boxes: vec![],
+            split_boxes_pending: 0,
         }
     }
     pub fn print(&self) {

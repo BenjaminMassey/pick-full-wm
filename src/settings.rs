@@ -22,6 +22,8 @@ pub struct Layout {
     pub swap_not_stack: bool,
     pub close_box: bool,
     pub monitor_box: bool,
+    pub split_box: bool,
+    pub pop_box: bool,
 }
 
 #[derive(serde::Deserialize, Clone)]
@@ -71,6 +73,8 @@ impl Default for Settings {
                 swap_not_stack: true,
                 close_box: true,
                 monitor_box: true,
+                split_box: false,
+                pop_box: false,
             },
             bindings: Bindings {
                 functions: BTreeMap::from([

@@ -13,6 +13,8 @@ new_to_main = true # new windows fill main area, rather than send to side
 swap_not_stack = true # main should replace chosen side, not go to bottom
 close_box = false
 monitor_box = false
+split_box = false # button on each side area to split it into main
+pop_box = false # button on a split main to pop its right-most window
 
 [bindings]
 swaps = [ "j", "k", "l", ";", "u", "i", "o", "p" ]

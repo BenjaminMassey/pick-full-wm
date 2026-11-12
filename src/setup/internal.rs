@@ -15,6 +15,12 @@ pub fn startups(state: &mut crate::state::State) {
             crate::binaries::monitor_box();
         }
     }
+    // split boxes are spawned per side area by windows::audits::split_boxes(..)
+    if state.settings.layout.pop_box {
+        for _ in 0..state.monitors.len() {
+            crate::binaries::pop_box();
+        }
+    }
 }
 
 pub fn custom_startups(state: &mut crate::state::State) {
