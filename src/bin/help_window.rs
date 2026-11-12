@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            365.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
+            390.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
         ]),
         centered: true,
         ..Default::default()
@@ -142,6 +142,11 @@ impl eframe::App for HelpWindow {
                             STANDARD_COLOR,
                         ),
                     ],
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.cycle_split.to_uppercase(),
+                    "cycle focus across split main",
                 );
                 super_label(
                     ui,

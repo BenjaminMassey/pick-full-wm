@@ -192,6 +192,14 @@ pub fn key(state: &mut crate::state::State, event: KeyReleaseEvent) {
         }
     }
 
+    let cycle_key = crate::keymap::parse_string(&state.settings.bindings.cycle_split);
+    if let Some(cycle_key) = cycle_key {
+        if keysym == Some(cycle_key) && mod4_pressed {
+            log::info!("Pressed cycle split key.");
+            crate::windows::core::cycle_split(state);
+        }
+    }
+
     let close_key = crate::keymap::parse_string(&state.settings.bindings.close_main);
     if let Some(close_key) = close_key {
         if keysym == Some(close_key) && mod4_pressed {

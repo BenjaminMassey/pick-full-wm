@@ -96,6 +96,22 @@ pub fn swap_side_area(state: &mut crate::state::State, index: usize, focus: Opti
     }
 }
 
+// move the keyboard to the next window of a split main area: left to right, looping
+pub fn cycle_split(state: &mut crate::state::State) {
+    let main_area = state.workspace().main_area.clone();
+    if main_area.len() < 2 {
+        return;
+    }
+    let index = main_area
+        .iter()
+        .position(|w| Some(*w) == state.workspace().focused_main())
+        .unwrap_or(0);
+    let next = main_area[(index + 1) % main_area.len()];
+    log::info!("Cycling split focus to main window {}.", next);
+    state.mut_workspace().main_focus = Some(next);
+    focus_main(state);
+}
+
 pub fn focus_main(state: &mut crate::state::State) {
     if let Some(window) = state.workspace().focused_main()
         && crate::safety::window_exists(state, window)
