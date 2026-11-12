@@ -165,6 +165,15 @@ pub fn fullscreen(state: &mut crate::state::State, area: &[Window]) {
             state.monitor().sizes.screen.1 as u32,
         ),
     );
+    // all of a split area (not just the focused window) covers boxes / docks / key hints
+    for window in area {
+        if let Err(e) = state.conn.configure_window(
+            *window,
+            &ConfigureWindowAux::new().stack_mode(StackMode::ABOVE),
+        ) {
+            log::error!("windows::fullscreen(..) raise window error: {:?}", e);
+        }
+    }
 
     if let Err(e) = state.conn.flush() {
         log::error!("windows::fullscreen(..) flush error: {:?}", e);
