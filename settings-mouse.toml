@@ -17,6 +17,7 @@ monitor_box = true
 [bindings]
 swaps = [ "j", "k", "l", ";", "u", "i", "o", "p" ]
 super_for_clicks = false # need to hold super for swapping via clicks
+focus_follows_mouse = true # hovering a main area window focuses it (side windows never)
 close_main = "q"
 fullscreen = "f"
 split = "s" # next swap joins main instead of replacing it (hold shift to pop the last off)

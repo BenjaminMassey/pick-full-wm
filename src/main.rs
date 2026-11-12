@@ -41,6 +41,7 @@ fn main() {
                 | Event::UnmapNotify(_)
                 | Event::DestroyNotify(_)
                 | Event::ClientMessage(_)
+                | Event::EnterNotify(_)
         ) {
             continue;
         }
@@ -69,6 +70,9 @@ fn main() {
             }
             Event::ClientMessage(e) => {
                 events::client::message(&mut state, e);
+            }
+            Event::EnterNotify(e) => {
+                events::input::enter(&mut state, e);
             }
             _ => {}
         }

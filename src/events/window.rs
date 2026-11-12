@@ -1,9 +1,9 @@
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
-    Allow, CONFIGURE_NOTIFY_EVENT, ConfigWindow, ConfigureNotifyEvent, ConfigureRequestEvent,
-    ConfigureWindowAux, ConnectionExt, DestroyNotifyEvent, EventMask, MapRequestEvent,
-    UnmapNotifyEvent,
+    Allow, CONFIGURE_NOTIFY_EVENT, ChangeWindowAttributesAux, ConfigWindow, ConfigureNotifyEvent,
+    ConfigureRequestEvent, ConfigureWindowAux, ConnectionExt, DestroyNotifyEvent, EventMask,
+    MapRequestEvent, UnmapNotifyEvent,
 };
 
 pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
@@ -139,6 +139,15 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
             crate::ewmh::set_active(state, event.window);
         }
         return;
+    }
+    // pointer crossings for focus follows mouse (see windows::core::focus_hovered(..))
+    if state.settings.bindings.focus_follows_mouse
+        && let Err(e) = state.conn.change_window_attributes(
+            event.window,
+            &ChangeWindowAttributesAux::new().event_mask(EventMask::ENTER_WINDOW),
+        )
+    {
+        log::error!("events::map_request(..) select input error: {:?}", e);
     }
     let main = state.workspace().main_area.clone();
     if !main.is_empty() {

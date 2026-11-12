@@ -112,6 +112,18 @@ pub fn cycle_split(state: &mut crate::state::State) {
     focus_main(state);
 }
 
+// focus follows the mouse within the main area only: side windows never take the keyboard
+pub fn focus_hovered(state: &mut crate::state::State, window: Window) {
+    if !state.workspace().main_area.contains(&window)
+        || state.workspace().focused_main() == Some(window)
+    {
+        return;
+    }
+    log::info!("Pointer entered main window {}: focusing it.", window);
+    state.mut_workspace().main_focus = Some(window);
+    focus_main(state);
+}
+
 pub fn focus_main(state: &mut crate::state::State) {
     if let Some(window) = state.workspace().focused_main()
         && crate::safety::window_exists(state, window)

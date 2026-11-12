@@ -19,7 +19,13 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            390.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
+            390.0
+                + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55)
+                + if window.settings.bindings.focus_follows_mouse {
+                    STANDARD_SIZE * 1.55
+                } else {
+                    0.0
+                },
         ]),
         centered: true,
         ..Default::default()
@@ -96,6 +102,16 @@ impl eframe::App for HelpWindow {
                     ]
                 };
                 mix_color_label(ui, &right_click);
+                if self.settings.bindings.focus_follows_mouse {
+                    mix_color_label(
+                        ui,
+                        &vec![
+                            ("[", STANDARD_COLOR),
+                            ("HOVER", KEY_COLOR),
+                            ("]: focus main area window", STANDARD_COLOR),
+                        ],
+                    );
+                }
                 super_label(
                     ui,
                     &self.settings.bindings.close_main.to_uppercase(),

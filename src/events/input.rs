@@ -1,8 +1,8 @@
 use x11rb::CURRENT_TIME;
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::{
-    Allow, ButtonPressEvent, ConnectionExt, KeyButMask, KeyReleaseEvent, Mapping,
-    MappingNotifyEvent,
+    Allow, ButtonPressEvent, ConnectionExt, EnterNotifyEvent, KeyButMask, KeyReleaseEvent, Mapping,
+    MappingNotifyEvent, NotifyMode,
 };
 
 pub fn button(state: &mut crate::state::State, event: ButtonPressEvent) {
@@ -351,6 +351,14 @@ fn keycode_to_keysym(state: &crate::state::State, keycode: u8) -> Option<u32> {
         }
     }
     None
+}
+
+pub fn enter(state: &mut crate::state::State, event: EnterNotifyEvent) {
+    // crossings from (un)grabs (clicks) aren't the pointer moving onto a window
+    if event.mode != NotifyMode::NORMAL {
+        return;
+    }
+    crate::windows::core::focus_hovered(state, event.event);
 }
 
 pub fn mapping(state: &mut crate::state::State, event: MappingNotifyEvent) {
