@@ -32,6 +32,7 @@ pub struct Bindings {
     pub super_for_clicks: bool,
     pub close_main: String,
     pub fullscreen: String,
+    pub split: String,
     pub help: String,
     pub key_hints: bool,
     pub workspaces: Vec<String>,
@@ -103,6 +104,7 @@ impl Default for Settings {
                 super_for_clicks: false,
                 close_main: "q".to_owned(),
                 fullscreen: "f".to_owned(),
+                split: "s".to_owned(),
                 help: "h".to_owned(),
                 key_hints: true,
                 workspaces: vec![

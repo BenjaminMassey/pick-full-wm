@@ -52,6 +52,7 @@ pub fn grab_keys(state: &mut crate::state::State) {
     let mut shifts: Vec<String> = vec![];
     shifts.push(state.settings.bindings.monitor.clone());
     shifts.push(state.settings.bindings.close_main.clone());
+    shifts.push(state.settings.bindings.split.clone());
     for workspace_key in &state.settings.bindings.workspaces {
         shifts.push(workspace_key.clone());
     }

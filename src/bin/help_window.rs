@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([
             550.0,
-            315.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
+            365.0 + (window.settings.bindings.functions.len() as f32 * STANDARD_SIZE * 1.55),
         ]),
         centered: true,
         ..Default::default()
@@ -122,6 +122,26 @@ impl eframe::App for HelpWindow {
                     ui,
                     &self.settings.bindings.swaps.join("  ").to_uppercase(),
                     "swap with side",
+                );
+                super_label(
+                    ui,
+                    &self.settings.bindings.split.to_uppercase(),
+                    "split main with next swap",
+                );
+                mix_color_label(
+                    ui,
+                    &vec![
+                        ("[", STANDARD_COLOR),
+                        ("SUPER", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        ("SHIFT", SUPER_COLOR),
+                        ("] + [", STANDARD_COLOR),
+                        (&self.settings.bindings.split.to_uppercase(), KEY_COLOR),
+                        (
+                            &format!("]: pop last window off split main"),
+                            STANDARD_COLOR,
+                        ),
+                    ],
                 );
                 super_label(
                     ui,

@@ -49,12 +49,12 @@ pub fn key_hints(state: &mut crate::state::State, positions: &[(i32, i32)]) {
 
 pub fn side_windows(state: &mut crate::state::State) {
     let mut change = false;
-    for window in state.workspace().side_windows.clone() {
-        if let Some(window) = window
-            && !crate::safety::window_exists(state, window)
-        {
-            crate::windows::core::remove_side_window(state, window);
-            change = true;
+    for area in state.workspace().side_areas.clone() {
+        for window in area {
+            if !crate::safety::window_exists(state, window) {
+                crate::windows::core::remove_side_window(state, window);
+                change = true;
+            }
         }
     }
     if change {
@@ -63,13 +63,13 @@ pub fn side_windows(state: &mut crate::state::State) {
 }
 
 pub fn main_space(state: &mut crate::state::State) {
-    if let Some(main) = state.workspace().main_window
-        && !crate::safety::window_exists(state, main)
-    {
-        crate::windows::audits::side_windows(state);
-        // same path as destroy / unmap: promotes side #0 and re-lays out the side space
-        state.all_windows.remove(&main);
-        crate::windows::core::release_window(state, main);
+    for main in state.workspace().main_area.clone() {
+        if !crate::safety::window_exists(state, main) {
+            crate::windows::audits::side_windows(state);
+            // same path as destroy / unmap: shrinks the main area (promoting side #0 once empty)
+            state.all_windows.remove(&main);
+            crate::windows::core::release_window(state, main);
+        }
     }
 }
 

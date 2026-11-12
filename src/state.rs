@@ -20,6 +20,7 @@ pub struct State {
     pub published_client_stacking: Vec<Window>,
     pub published_desktops: HashMap<Window, usize>,
     pub startup_warnings: Vec<String>, // logged once logging is set up
+    pub split_queued: bool,            // next side pick joins the main area instead of swapping
 }
 impl State {
     pub fn init() -> Self {
@@ -56,6 +57,7 @@ impl State {
             published_client_stacking: vec![],
             published_desktops: HashMap::new(),
             startup_warnings,
+            split_queued: false,
         }
     }
     pub fn monitor(&self) -> &Monitor {
@@ -183,27 +185,40 @@ fn monitor_setting(
 }
 
 pub struct Workspace {
-    pub main_window: Option<Window>,
-    pub side_windows: Vec<Option<Window>>,
+    pub main_area: Vec<Window>, // split side-by-side when holding more than one
+    pub main_focus: Option<Window>, // which main area window has the keyboard
+    pub side_areas: Vec<Vec<Window>>,
     pub help_window: Option<Window>,
     pub key_hint_windows: HashMap<String, Window>,
     pub floatings: Vec<Window>,
-    pub fullscreen: Option<Window>, // stays fullscreen whenever it's this workspace's main
+    pub fullscreen: Option<Window>, // stays fullscreen whenever it's in this workspace's main area
 }
 impl Workspace {
     fn new() -> Self {
         Self {
-            main_window: None,
-            side_windows: vec![],
+            main_area: vec![],
+            main_focus: None,
+            side_areas: vec![],
             help_window: None,
             key_hint_windows: HashMap::new(),
             floatings: vec![],
             fullscreen: None,
         }
     }
-    // the fullscreen window is currently main (so it covers the screen)
+    // the fullscreen window is currently in main (so the main area covers the screen)
     pub fn is_fullscreen(&self) -> bool {
-        self.fullscreen.is_some() && self.fullscreen == self.main_window
+        self.fullscreen.is_some_and(|w| self.main_area.contains(&w))
+    }
+    // main area window holding the keyboard: the last focused one, else the first
+    pub fn focused_main(&self) -> Option<Window> {
+        match self.main_focus {
+            Some(window) if self.main_area.contains(&window) => Some(window),
+            _ => self.main_area.first().copied(),
+        }
+    }
+    // index of the side area holding the window
+    pub fn side_index(&self, window: Window) -> Option<usize> {
+        self.side_areas.iter().position(|a| a.contains(&window))
     }
 }
 

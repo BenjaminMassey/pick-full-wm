@@ -12,8 +12,8 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         let mut slot: Option<(usize, usize)> = None;
         for (monitor_index, monitor) in state.monitors.iter().enumerate() {
             for (workspace_index, workspace) in monitor.workspaces.iter().enumerate() {
-                if workspace.main_window == Some(event.window)
-                    || workspace.side_windows.contains(&Some(event.window))
+                if workspace.main_area.contains(&event.window)
+                    || workspace.side_index(event.window).is_some()
                 {
                     slot = Some((monitor_index, workspace_index));
                 }
@@ -140,17 +140,18 @@ pub fn map_request(state: &mut crate::state::State, event: MapRequestEvent) {
         }
         return;
     }
-    if let Some(main) = state.workspace().main_window {
+    let main = state.workspace().main_area.clone();
+    if !main.is_empty() {
         // a fullscreen main keeps the screen: new windows open on the side
         if state.settings.layout.new_to_main && !state.workspace().is_fullscreen() {
-            state.mut_workspace().main_window = None;
+            state.mut_workspace().main_area = vec![];
             crate::windows::core::send_side_space(state, main, None);
-            crate::windows::core::fill_main_space(state, event.window);
+            crate::windows::core::fill_main_space(state, vec![event.window]);
         } else {
-            crate::windows::core::send_side_space(state, event.window, None);
+            crate::windows::core::send_side_space(state, vec![event.window], None);
         }
     } else {
-        crate::windows::core::fill_main_space(state, event.window);
+        crate::windows::core::fill_main_space(state, vec![event.window]);
     }
     crate::windows::layout::place_close_boxes(state);
     crate::windows::layout::place_monitor_boxes(state);
@@ -185,8 +186,8 @@ pub fn configure_request(state: &mut crate::state::State, event: ConfigureReques
     let mut is_floating = false;
     for monitor in &state.monitors {
         for workspace in &monitor.workspaces {
-            if workspace.main_window == Some(event.window)
-                || workspace.side_windows.contains(&Some(event.window))
+            if workspace.main_area.contains(&event.window)
+                || workspace.side_index(event.window).is_some()
             {
                 is_tiled = true;
             }

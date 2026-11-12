@@ -5,13 +5,13 @@ pub fn switch(state: &mut crate::state::State) {
     for monitor in &state.monitors {
         for index in 0..monitor.workspaces.len() {
             if index == state.current_workspace {
-                if let Some(main) = monitor.workspaces[index].main_window {
-                    if let Err(e) = state.conn.map_window(main) {
+                for main in &monitor.workspaces[index].main_area {
+                    if let Err(e) = state.conn.map_window(*main) {
                         log::error!("windows::switch_workspace(..) map window error: {:?}", e);
                     }
                 }
-                for window in &monitor.workspaces[index].side_windows {
-                    if let Some(window) = window {
+                for area in &monitor.workspaces[index].side_areas {
+                    for window in area {
                         if let Err(e) = state.conn.map_window(*window) {
                             log::error!("windows::switch_workspace(..) map window error: {:?}", e);
                         }
@@ -33,13 +33,13 @@ pub fn switch(state: &mut crate::state::State) {
                     }
                 }
             } else {
-                if let Some(main) = monitor.workspaces[index].main_window {
-                    if let Err(e) = state.conn.unmap_window(main) {
+                for main in &monitor.workspaces[index].main_area {
+                    if let Err(e) = state.conn.unmap_window(*main) {
                         log::error!("windows::switch_workspace(..) unmap window error: {:?}", e);
                     }
                 }
-                for window in &monitor.workspaces[index].side_windows {
-                    if let Some(window) = window {
+                for area in &monitor.workspaces[index].side_areas {
+                    for window in area {
                         if let Err(e) = state.conn.unmap_window(*window) {
                             log::error!(
                                 "windows::switch_workspace(..) unmap window error: {:?}",
@@ -71,10 +71,12 @@ pub fn switch(state: &mut crate::state::State) {
     }
     crate::ewmh::update_workspace(state);
     crate::ewmh::clear_active(state);
+    state.split_queued = false;
     for i in 0..state.monitors.len() {
         let real_monitor = state.current_monitor; // TODO: shouldn't need temp like this
         state.current_monitor = i; // TODO: shouldn't need temp like this
-        if let Some(main) = state.workspace().main_window {
+        let main = state.workspace().main_area.clone();
+        if !main.is_empty() {
             crate::windows::core::fill_main_space(state, main);
         }
         crate::windows::layout::layout_side_space(state);

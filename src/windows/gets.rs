@@ -70,17 +70,8 @@ fn text_property(
 pub fn monitor_index(state: &crate::state::State, window: Window) -> usize {
     for (monitor_index, monitor) in state.monitors.iter().enumerate() {
         for workspace in &monitor.workspaces {
-            if let Some(main) = workspace.main_window
-                && main == window
-            {
+            if workspace.main_area.contains(&window) || workspace.side_index(window).is_some() {
                 return monitor_index;
-            }
-            for side_window in &workspace.side_windows {
-                if let Some(side) = side_window
-                    && side == &window
-                {
-                    return monitor_index;
-                }
             }
             for floating in &workspace.floatings {
                 if floating == &window {

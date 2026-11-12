@@ -22,10 +22,11 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
         // Activate/focus a window
         let monitor_index = crate::windows::gets::monitor_index(state, event.window);
         let workspace = &state.monitors[monitor_index].workspaces[state.current_workspace];
-        let is_side = workspace.side_windows.contains(&Some(event.window));
+        let side_index = workspace.side_index(event.window);
+        let is_main = workspace.main_area.contains(&event.window);
         let is_floating = workspace.floatings.contains(&event.window);
-        if !is_side && !is_floating {
-            // unmanaged (override-redirect menus, etc) or already main
+        if side_index.is_none() && !is_main && !is_floating {
+            // unmanaged (override-redirect menus, etc)
             log::info!("Ignored activate request for window {}.", event.window);
             return;
         }
@@ -40,18 +41,18 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
             }
             return;
         }
+        if is_main {
+            // already main: only matters for a split main area, where it takes the keyboard
+            if state.workspace().focused_main() != Some(event.window) {
+                log::info!("Activate request for main window {}.", event.window);
+                state.mut_workspace().main_focus = Some(event.window);
+                crate::windows::core::focus_main(state);
+            }
+            return;
+        }
         log::info!("Activate request for side window {}.", event.window);
-        if let Some(existing) = state.workspace().main_window {
-            if existing == event.window {
-                return;
-            }
-            let index = crate::windows::core::remove_side_window(state, event.window);
-            crate::windows::core::fill_main_space(state, event.window);
-            if state.settings.layout.swap_not_stack {
-                crate::windows::core::send_side_space(state, existing, Some(index));
-            } else {
-                crate::windows::core::send_side_space(state, existing, None);
-            }
+        if let Some(index) = side_index {
+            crate::windows::core::swap_side_area(state, index, Some(event.window));
         }
     } else if event.type_ == state.atoms._NET_CLOSE_WINDOW {
         // Request to close a window (from panel, pager, etc.)
@@ -76,7 +77,7 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
             .workspaces
             .iter()
             .position(|w| {
-                w.main_window == Some(event.window) || w.side_windows.contains(&Some(event.window))
+                w.main_area.contains(&event.window) || w.side_index(event.window).is_some()
             });
         let Some(source_workspace) = source_workspace else {
             log::info!(
@@ -98,24 +99,26 @@ pub fn message(state: &mut crate::state::State, event: ClientMessageEvent) {
         let real_current_workspace = state.current_workspace; // TODO: gross temp set
         state.current_monitor = monitor_index; // TODO: gross temp set
         state.current_workspace = source_workspace; // TODO: gross temp set
-        if state.workspace().main_window == Some(event.window) {
-            if !state.workspace().side_windows.is_empty()
-                && let Some(new_main) = state.workspace().side_windows[0]
-            {
-                crate::windows::core::remove_side_window(state, new_main);
+        if state.workspace().main_area.contains(&event.window) {
+            // only this window moves: the rest of a split main area stays
+            state
+                .mut_workspace()
+                .main_area
+                .retain(|w| *w != event.window);
+            if state.workspace().main_area.is_empty() && !state.workspace().side_areas.is_empty() {
+                let new_main = crate::windows::core::take_side_area(state, 0);
                 crate::windows::core::fill_main_space(state, new_main);
-            } else {
-                state.mut_workspace().main_window = None;
             }
         } else {
             crate::windows::core::remove_side_window(state, event.window);
         }
         state.current_workspace = target_workspace; // TODO: gross temp set
-        if let Some(move_aside) = state.workspace().main_window.clone() {
-            state.mut_workspace().main_window = None;
+        let move_aside = state.workspace().main_area.clone();
+        if !move_aside.is_empty() {
+            state.mut_workspace().main_area = vec![];
             crate::windows::core::send_side_space(state, move_aside, None);
         }
-        crate::windows::core::fill_main_space(state, event.window);
+        crate::windows::core::fill_main_space(state, vec![event.window]);
         state.current_monitor = real_current_monitor; // TODO: gross temp set
         state.current_workspace = real_current_workspace; // TODO: gross temp set
         crate::windows::core::focus_main(state);
