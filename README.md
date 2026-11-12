@@ -57,6 +57,7 @@ By default, both settings place their log files in `~/.local/share/pick-full-wm/
 - [x] Mouse driven way to move across monitors
 - [x] Logging of basic functionality
 - [x] Configurable side positioning for side windows
+- [x] Side-by-side "split" areas for multi-window
 - [ ] Support for monitor rotation
 - [ ] Way to move floating (pop-up) windows
 - [ ] Integration with "cargo deb"
@@ -66,7 +67,6 @@ By default, both settings place their log files in `~/.local/share/pick-full-wm/
 - [ ] Support for horizontal rather than vertical side windows
 
 There are some other bigger considerations that would be core to the intent of the system, and thus are not simply written as TODOs. Some of these are:
-- Some concept of side-by-side windows
 - Side windows being rendered previews rather than actual resizes
 - Functionality to swap between handled and floating (like Niri)
 - Wayland support
